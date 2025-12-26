@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  telegram_id BIGINT UNIQUE NOT NULL,
+  balance NUMERIC(18,8) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS balance_logs (
+  id SERIAL PRIMARY KEY,
+  admin_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  amount NUMERIC(18,8) NOT NULL,
+  action TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);

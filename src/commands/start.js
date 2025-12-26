@@ -12,11 +12,17 @@ export async function startCommand(ctx) {
   );
 
   await ctx.reply(
-    "Welcome 👋\n\nChoose an option:",
-    Markup.inlineKeyboard([
-      [Markup.button.callback("💰 Deposit", "deposit")],
-      [Markup.button.callback("📊 Balance", "balance")],
-      [Markup.button.callback("📞 Support", "support")],
-    ]).resize()
+    "👋 Welcome!\n\nUse the menu below to access your wallet, deposit, shop, and escrow services.",
+    Markup.keyboard([
+      ["🌐 Our Community"],
+      ["👛 Wallet", "💰 Deposit"],
+      ["💸 Request Withdrawal"],
+      ["🤝 Escrow"],
+      ["🛒 Shop"],
+      ["📜 My Orders"],
+      ["🆘 Support"],
+    ])
+      .resize()
+      .persistent()
   );
 }

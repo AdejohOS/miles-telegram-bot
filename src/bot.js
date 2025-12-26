@@ -14,8 +14,14 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 bot.start(startCommand);
 
 // INLINE BUTTON HANDLERS
-bot.action("deposit", depositCommand);
-bot.action("balance", balanceCommand);
+bot.action("deposit", async (ctx) => {
+  await ctx.answerCbQuery();
+  return depositCommand(ctx);
+});
+bot.action("balance", async (ctx) => {
+  await ctx.answerCbQuery();
+  return balanceCommand(ctx);
+});
 
 bot.action("support", (ctx) => {
   ctx.reply("📞 Support:\nContact @YourSupportUsername");

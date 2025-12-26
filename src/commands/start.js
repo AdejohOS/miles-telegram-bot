@@ -13,6 +13,10 @@ export async function startCommand(ctx) {
 
   await ctx.reply(
     "Welcome 👋\n\nChoose an option:",
-    Markup.keyboard([["💰 Deposit", "📊 Balance"]]).resize()
+    Markup.inlineKeyboard([
+      [Markup.button.callback("💰 Deposit", "deposit")],
+      [Markup.button.callback("📊 Balance", "balance")],
+      [Markup.button.callback("📞 Support", "support")],
+    ]).resize()
   );
 }

@@ -2,6 +2,10 @@ import { Markup } from "telegraf";
 import { BTC_ADDRESS } from "../config.js";
 
 export async function depositCommand(ctx) {
+  await ctx.answerCbQuery();
+  if (!BTC_ADDRESS) {
+    return ctx.reply("❌ BTC deposit address not configured. Contact admin.");
+  }
   await ctx.reply(
     `💰 *Bitcoin Deposit*\n\n` +
       `Send BTC to:\n\`${BTC_ADDRESS}\`\n\n` +

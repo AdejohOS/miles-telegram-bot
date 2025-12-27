@@ -12,11 +12,26 @@ export async function startCommand(ctx) {
   );
 
   await ctx.reply(
-    "Welcome 👋\n\nChoose an option:",
-    Markup.inlineKeyboard([
-      [Markup.button.callback("💰 Deposit", "deposit")],
-      [Markup.button.callback("📊 Balance", "balance")],
-      [Markup.button.callback("📞 Support", "support")],
-    ])
+    "👋 *Welcome!*\n\nUse the menu below to access your wallet, deposit, shop, and escrow services.",
+    {
+      parse_mode: "Markdown",
+      ...Markup.inlineKeyboard([
+        [
+          Markup.button.url(
+            "🌐 Our Community",
+            "https://t.me/yourcommunitylink"
+          ),
+        ],
+
+        [
+          Markup.button.callback("💰 Deposit", "deposit"),
+          Markup.button.callback("📊 Wallet", "balance"),
+        ],
+        [Markup.button.callback("🛒 Shop", "shop")],
+        [Markup.button.callback("⚖ Escrow", "escrow")],
+        [Markup.button.callback("📜 My Orders", "orders")],
+        [Markup.button.callback("📞 Support", "support")],
+      ]),
+    }
   );
 }

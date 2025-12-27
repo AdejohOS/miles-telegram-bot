@@ -13,15 +13,21 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 // START
 bot.start(startCommand);
 
-// REPLY KEYBOARD HANDLERS
-bot.hears("💰 Deposit", depositCommand);
-bot.hears("👛 Wallet", balanceCommand);
+bot.action("deposit", depositCommand);
+bot.action("balance", balanceCommand);
 
-bot.hears("🆘 Support", (ctx) => {
+bot.action("requestWithdrawal", async (ctx) => {
+  await ctx.answerCbQuery();
+  await ctx.reply("💁 Withdrawal request feature coming soon.");
+});
+
+bot.action("support", (ctx) => {
+  ctx.answerCbQuery();
   ctx.reply("🆘 Support\n\nContact: @YourSupportUsername");
 });
 
-bot.hears("🌐 Our Community", (ctx) => {
+bot.action("community", (ctx) => {
+  ctx.answerCbQuery();
   ctx.reply("🌐 Join our community:\nhttps://t.me/yourgroup");
 });
 

@@ -21,8 +21,6 @@ export async function startCommand(ctx) {
       ["🛒 Shop"],
       ["📜 My Orders"],
       ["🆘 Support"],
-    ])
-      .resize()
-      .persistent()
+    ]).resize()
   );
 }

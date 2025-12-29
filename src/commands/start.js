@@ -1,3 +1,4 @@
+// Working start command
 import { Markup } from "telegraf";
 import { pool } from "../db.js";
 

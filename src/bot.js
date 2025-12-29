@@ -15,12 +15,16 @@ bot.start(startCommand);
 
 bot.use(async (ctx, next) => {
   if (ctx.callbackQuery) {
-    await ctx.answerCbQuery();
+    await ctx.answerCbQuery().catch(() => {});
   }
   return next();
 });
 
-bot.action("deposit", depositCommand);
+bot.action("deposit", async (ctx) => {
+  console.log("✅ Deposit button clicked");
+  await depositCommand(ctx);
+});
+
 bot.action("balance", balanceCommand);
 
 bot.action("requestWithdrawal", async (ctx) => {
@@ -35,8 +39,16 @@ bot.action("community", (ctx) => {
   ctx.reply("🌐 Join our community:\nhttps://t.me/milestraderchat");
 });
 
+bot.action(["shop", "escrow", "orders"], async (ctx) => {
+  await ctx.reply("🚧 This feature is coming soon.");
+});
+
 bot.action("back_to_menu", async (ctx) => {
   await startCommand(ctx);
+});
+
+bot.catch((err, ctx) => {
+  console.error("Bot error:", err);
 });
 
 // ADMIN COMMANDS

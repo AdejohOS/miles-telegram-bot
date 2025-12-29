@@ -50,18 +50,7 @@ bot.action(["shop", "escrow", "orders"], async (ctx) => {
   await ctx.reply("🚧 This feature is coming soon.");
 });
 
-import { startCommand } from "./commands/start.js";
-
-bot.action("main_menu", async (ctx) => {
-  await ctx.answerCbQuery();
-
-  try {
-    await startCommand(ctx);
-  } catch {
-    await ctx.reply("Type /start to return to menu.");
-  }
-});
-
+bot.action("menu_main", startCommand);
 bot.action("menu_deposit", depositMenu);
 bot.action("deposit_btc", btcDeposit);
 

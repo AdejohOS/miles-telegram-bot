@@ -19,7 +19,7 @@ export async function startCommand(ctx) {
     "👋 *Welcome!*\n\nUse the menu below to access your wallet, deposit, shop, and escrow services.",
     {
       parse_mode: "Markdown",
-      ...Markup.inlineKeyboard([
+      reply_markup: Markup.inlineKeyboard([
         [Markup.button.url("🌐 Our Community", "https://t.me/milestraderchat")],
 
         [

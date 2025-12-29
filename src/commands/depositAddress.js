@@ -10,7 +10,7 @@ export async function depositAddress(ctx, key) {
     return ctx.reply("❌ Deposit method unavailable. Contact admin.");
   }
 
-  await ctx.editMessageText(
+  await ctx.reply(
     `💰 *${wallet.name} Deposit*\n\n` +
       `Send funds to:\n\n` +
       `\`${wallet.address}\`\n\n` +

@@ -1,18 +1,15 @@
 import { Markup } from "telegraf";
-import { BTC_ADDRESS } from "../config.js";
 
 export async function depositCommand(ctx) {
-  await ctx.editMessageText(
-    `💰 *Bitcoin Deposit*\n\n` +
-      `Send BTC to:\n` +
-      `\`${BTC_ADDRESS}\`\n\n` +
-      `⚠ BTC only\n` +
-      `ℹ Balance will be updated after admin confirmation`,
-    {
-      parse_mode: "Markdown",
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Back to Menu", "back_to_menu")],
-      ]),
-    }
-  );
+  await ctx.answerCbQuery();
+
+  await ctx.reply("💰 *Choose Deposit Method*", {
+    parse_mode: "Markdown",
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback("₿ Bitcoin (BTC)", "deposit_btc")],
+      [Markup.button.callback("💵 USDT (TRC20)", "deposit_usdt_trc20")],
+      [Markup.button.callback("💵 USDT (ERC20)", "deposit_usdt_erc20")],
+      [Markup.button.callback("⬅ Back to Menu", "back_to_menu")],
+    ]),
+  });
 }

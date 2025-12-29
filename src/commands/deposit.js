@@ -3,7 +3,7 @@ import { Markup } from "telegraf";
 export async function depositCommand(ctx) {
   await ctx.answerCbQuery();
 
-  await ctx.reply("💰 *Choose Deposit Method*", {
+  await ctx.editMessageText("💰 *Choose Deposit Method*", {
     parse_mode: "Markdown",
     reply_markup: Markup.inlineKeyboard([
       [Markup.button.callback("₿ Bitcoin (BTC)", "deposit_btc")],

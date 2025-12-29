@@ -1,4 +1,3 @@
-// commands/profile.js
 import { Markup } from "telegraf";
 import { pool } from "../db.js";
 

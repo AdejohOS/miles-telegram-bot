@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 
 import { startCommand } from "./commands/start.js";
 import { depositCommand } from "./commands/deposit.js";
-import { balanceCommand } from "./commands/profile.js";
+import { profileCommand } from "./commands/profile.js";
 import { adminOnly } from "./middlewares/adminOnly.js";
 import { addBalance, deductBalance } from "./commands/admin.js";
 import { depositAddress } from "./commands/depositAddress.js";

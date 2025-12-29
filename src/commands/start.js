@@ -9,7 +9,7 @@ export async function startCommand(ctx) {
     [Markup.button.url("🌐 Our Community", "https://t.me/milestraderchat")],
     [
       Markup.button.callback("💰 Deposit", "deposit_menu"),
-      Markup.button.callback("📊 Wallet", "balance"),
+      Markup.button.callback("👤 Profile", "profile"),
     ],
     [Markup.button.callback("💁 Request Withdrawal", "requestWithdrawal")],
     [Markup.button.callback("🛒 Shop", "shop")],

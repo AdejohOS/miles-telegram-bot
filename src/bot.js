@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 
 import { startCommand } from "./commands/start.js";
 import { depositCommand } from "./commands/deposit.js";
-import { balanceCommand } from "./commands/balance.js";
+import { balanceCommand } from "./commands/profile.js";
 import { adminOnly } from "./middlewares/adminOnly.js";
 import { addBalance, deductBalance } from "./commands/admin.js";
 import { depositAddress } from "./commands/depositAddress.js";
@@ -32,7 +32,7 @@ bot.action("deposit_usdt_trc20", (ctx) => depositAddress(ctx, "usdt_trc20"));
 
 bot.action("deposit_usdt_erc20", (ctx) => depositAddress(ctx, "usdt_erc20"));
 
-bot.action("balance", balanceCommand);
+bot.action("profile", profileCommand);
 
 bot.action("requestWithdrawal", async (ctx) => {
   await ctx.reply("💁 Withdrawal request feature coming soon.");

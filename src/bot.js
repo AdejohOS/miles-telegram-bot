@@ -50,8 +50,7 @@ bot.action(["shop", "escrow", "orders"], async (ctx) => {
   await ctx.reply("🚧 This feature is coming soon.");
 });
 
-bot.action("menu_deposit", depositMenu);
-bot.action("deposit_btc", btcDeposit);
+bot.action("menu_main", startCommand);
 
 bot.catch((err, ctx) => {
   console.error("Bot error:", err);

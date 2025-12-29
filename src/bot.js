@@ -13,22 +13,30 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 // START
 bot.start(startCommand);
 
+bot.use(async (ctx, next) => {
+  if (ctx.callbackQuery) {
+    await ctx.answerCbQuery();
+  }
+  return next();
+});
+
 bot.action("deposit", depositCommand);
 bot.action("balance", balanceCommand);
 
 bot.action("requestWithdrawal", async (ctx) => {
-  await ctx.answerCbQuery();
   await ctx.reply("💁 Withdrawal request feature coming soon.");
 });
 
 bot.action("support", (ctx) => {
-  ctx.answerCbQuery();
   ctx.reply("🆘 Support\n\nContact: @YourSupportUsername");
 });
 
 bot.action("community", (ctx) => {
-  ctx.answerCbQuery();
-  ctx.reply("🌐 Join our community:\nhttps://t.me/yourgroup");
+  ctx.reply("🌐 Join our community:\nhttps://t.me/milestraderchat");
+});
+
+bot.action("back_to_menu", async (ctx) => {
+  await startCommand(ctx);
 });
 
 // ADMIN COMMANDS

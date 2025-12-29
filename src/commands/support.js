@@ -2,7 +2,10 @@ import { Markup } from "telegraf";
 
 export async function supportCommand(ctx) {
   try {
-    await ctx.answerCbQuery();
+    // ✅ Only answer if this is a callback query
+    if (ctx.callbackQuery) {
+      await ctx.answerCbQuery();
+    }
 
     await ctx.editMessageText(
       "🆘 *Support*\n\nTap the button below to chat with support:",
@@ -18,11 +21,20 @@ export async function supportCommand(ctx) {
       }
     );
   } catch (err) {
-    // Fallback if message can't be edited (old message, etc.)
+    console.error("Support edit failed:", err.message);
+
     await ctx.reply(
       "🆘 *Support*\n\nTap below to chat with support:\n" +
         "👉 https://t.me/YourSupportUsername",
-      { parse_mode: "Markdown" }
+      {
+        parse_mode: "Markdown",
+        reply_markup: Markup.inlineKeyboard([
+          Markup.button.url(
+            "💬 Chat with Support",
+            "https://t.me/YourSupportUsername"
+          ),
+        ]),
+      }
     );
   }
 }

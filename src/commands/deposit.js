@@ -2,7 +2,7 @@ import { Markup } from "telegraf";
 import { BTC_ADDRESS } from "../config.js";
 
 export async function depositCommand(ctx) {
-  await ctx.reply(
+  await ctx.editMessageText(
     `💰 *Bitcoin Deposit*\n\n` +
       `Send BTC to:\n` +
       `\`${BTC_ADDRESS}\`\n\n` +

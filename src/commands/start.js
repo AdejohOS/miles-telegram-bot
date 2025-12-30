@@ -20,7 +20,7 @@ export async function startCommand(ctx) {
   ]);
   if (isAdmin) {
     keyboard.reply_markup.inline_keyboard.push([
-      Markup.button.callback("🛠 Admin Panel", "admin_panel"),
+      Markup.button.callback("🛠 Admin Panel", "admin_menu"),
     ]);
   }
   // DB insert ONLY on real /start

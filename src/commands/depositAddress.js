@@ -24,7 +24,7 @@ export async function depositAddress(ctx, key) {
     `\`${wallet.address}\`\n\n` +
     `💵 *Minimum deposit:* $${MIN_DEPOSIT_USD}\n` +
     `⚠ Send only via the correct network\n` +
-    `ℹ Balance updated after admin confirmation\n\n` +
+    `ℹ Balance updates after payment is completed\n\n` +
     `📋 _Tap and hold the address to copy_`;
 
   await ctx.editMessageText(text, {

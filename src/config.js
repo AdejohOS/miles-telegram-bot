@@ -17,3 +17,5 @@ export const DEPOSIT_WALLETS = {
     address: process.env.USDT_ERC20_ADDRESS,
   },
 };
+
+export const ADMIN_IDS = [1013037662];

@@ -1,8 +1,11 @@
-import { ADMIN_ID } from "../config.js";
+import { ADMIN_IDS } from "../config.js";
 
-export function adminOnly(ctx, next) {
-  if (ctx.from.id !== ADMIN_ID) {
-    return ctx.reply("❌ Unauthorized");
+export async function adminOnly(ctx, next) {
+  const userId = ctx.from?.id;
+
+  if (!ADMIN_IDS.includes(userId)) {
+    return ctx.reply("⛔ Access denied.");
   }
+
   return next();
 }

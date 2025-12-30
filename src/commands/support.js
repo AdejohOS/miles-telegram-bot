@@ -9,20 +9,14 @@ export async function supportCommand(ctx) {
       {
         parse_mode: "Markdown",
         ...Markup.inlineKeyboard([
-          [
-            Markup.button.url(
-              "💬 Chat with Support",
-              "https://t.me/YourSupportUsername"
-            ),
-          ],
+          [Markup.button.url("💬 Chat with Support", "https://t.me/D_dls25")],
           [Markup.button.callback("⬅ Back to Menu", "main_menu")],
         ]),
       }
     );
   } catch (err) {
-    // Fallback (rare)
     await ctx.reply(
-      "🆘 *Support*\n\nChat with support:\n👉 https://t.me/YourSupportUsername",
+      "🆘 *Support*\n\nChat with support:\n👉 https://t.me/D_dls25",
       { parse_mode: "Markdown" }
     );
   }

@@ -13,3 +13,14 @@ CREATE TABLE IF NOT EXISTS balance_logs (
   action TEXT NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE deposits (
+  id SERIAL PRIMARY KEY,
+  telegram_id BIGINT NOT NULL,
+  coin TEXT NOT NULL,
+  amount_usd NUMERIC,
+  tx_hash TEXT,
+  status TEXT DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT NOW()
+);
+

@@ -6,7 +6,7 @@ export async function startCommand(ctx) {
     "👋 *Welcome!*\n\nUse the menu below to access your wallet, deposit, shop, and escrow services.";
 
   const keyboard = Markup.inlineKeyboard([
-    [Markup.button.url("🌐 Our Community", "https://t.me/milestraderchat")],
+    [Markup.button.url("🌐 Group Chat", "https://t.me/milestraderchat")],
     [
       Markup.button.callback("💰 Deposit", "deposit_menu"),
       Markup.button.callback("👤 Profile", "profile"),

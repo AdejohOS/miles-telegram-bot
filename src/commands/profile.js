@@ -29,7 +29,7 @@ export async function profileCommand(ctx) {
     `👤 *Your Profile*\n\n` +
     `🆔 *Telegram ID:* ${telegramId}\n` +
     `📅 *Joined:* ${joined}\n\n` +
-    `💰 *Balance:* ${user.balance} BTC\n` +
+    `💰 *Balance:* ${user.balance} USD\n` +
     `🔄 *Transactions:* Coming soon\n\n` +
     `✨ _More features coming_`;
 

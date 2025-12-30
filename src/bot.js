@@ -5,9 +5,12 @@ import { startCommand } from "./commands/start.js";
 import { depositCommand } from "./commands/deposit.js";
 import { profileCommand } from "./commands/profile.js";
 import { supportCommand } from "./commands/support.js";
-import { adminOnly } from "./middlewares/adminOnly.js";
+
 import { addBalance, deductBalance } from "./commands/admin.js";
 import { depositAddress } from "./commands/depositAddress.js";
+import { adminDeposits } from "./commands/adminDeposits.js";
+import { adminMenu } from "./commands/adminMenu.js";
+import { adminOnly } from "./middlewares/adminOnly.js";
 
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -60,6 +63,8 @@ bot.catch((err, ctx) => {
 });
 
 // ADMIN COMMANDS
+bot.action("admin_menu", adminOnly, adminMenu);
+
 bot.command("addbalance", adminOnly, addBalance);
 bot.command("deductbalance", adminOnly, deductBalance);
 

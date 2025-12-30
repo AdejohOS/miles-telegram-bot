@@ -6,7 +6,7 @@ export async function startCommand(ctx) {
   const text =
     "👋 *Welcome!*\n\nUse the menu below to access your wallet, deposit, shop, and escrow services.";
 
-  const keyboard = Markup.inlineKeyboard([
+  const rows = [
     [Markup.button.url("🌐 Group Chat", "https://t.me/milestraderchat")],
     [
       Markup.button.callback("💰 Deposit", "deposit_menu"),
@@ -17,8 +17,13 @@ export async function startCommand(ctx) {
     [Markup.button.callback("🤝 Escrow", "escrow")],
     [Markup.button.callback("📜 My Orders", "orders")],
     [Markup.button.callback("📞 Support", "support")],
-    isAdmin ? [Markup.button.callback("🛠 Admin Menu", "admin_menu")] : [],
-  ]);
+  ];
+
+  if (isAdmin) {
+    rows.push([Markup.button.callback("🛠 Admin Menu", "admin_menu")]);
+  }
+
+  const keyboard = Markup.inlineKeyboard(rows);
 
   // DB insert ONLY on real /start
   if (ctx.message?.from) {

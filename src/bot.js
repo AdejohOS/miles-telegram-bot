@@ -43,10 +43,6 @@ bot.action("requestWithdrawal", async (ctx) => {
   await ctx.reply("💁 Withdrawal request feature coming soon.");
 });
 
-bot.action("support", (ctx) => {
-  ctx.reply("🆘 Support\n\nContact: @YourSupportUsername");
-});
-
 bot.action("community", (ctx) => {
   ctx.reply("🌐 Join our community:\nhttps://t.me/milestraderchat");
 });

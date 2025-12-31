@@ -1,8 +1,9 @@
 import { Markup } from "telegraf";
 import { pool } from "../db.js";
+import { ADMIN_IDS } from "../config.js";
 
 export async function startCommand(ctx) {
-  const isAdmin = ctx.from?.id === Number(process.env.ADMIN_ID);
+  const isAdmin = ADMIN_IDS.includes(ctx.from?.id);
   const text =
     "👋 *Welcome!*\n\nUse the menu below to access your wallet, deposit, shop, and escrow services.";
 

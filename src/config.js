@@ -18,4 +18,4 @@ export const DEPOSIT_WALLETS = {
   },
 };
 
-export const ADMIN_IDS = [1013037662];
+export const ADMIN_IDS = [1013037662, 8218519406];

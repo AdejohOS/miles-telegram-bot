@@ -8,7 +8,6 @@ import { supportCommand } from "./commands/support.js";
 
 import { addBalance, deductBalance } from "./commands/admin.js";
 import { depositAddress } from "./commands/depositAddress.js";
-import { adminDeposits } from "./commands/adminDeposits.js";
 import { adminMenu } from "./commands/adminMenu.js";
 import { adminOnly } from "./middlewares/adminOnly.js";
 
@@ -60,6 +59,9 @@ bot.catch((err, ctx) => {
 
 // ADMIN COMMANDS
 bot.action("admin_menu", adminOnly, adminMenu);
+
+bot.command("addbalance", adminOnly, addBalance);
+bot.command("deductbalance", adminOnly, deductBalance);
 
 // Launch bot
 bot.launch();

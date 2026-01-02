@@ -25,10 +25,6 @@ bot.use(async (ctx, next) => {
   return next();
 });
 
-bot.action("deposit", async (ctx) => {
-  await depositMenu(ctx);
-});
-
 bot.action("deposit_btc", (ctx) => depositBTC(ctx, "btc"));
 
 // USDT
@@ -52,7 +48,7 @@ bot.action(["shop", "escrow", "orders"], async (ctx) => {
 });
 
 bot.action("main_menu", startCommand);
-bot.action("deposit_menu", depositCommand);
+bot.action("deposit_menu", depositMenu);
 
 bot.catch((err, ctx) => {
   console.error("Bot error:", err);

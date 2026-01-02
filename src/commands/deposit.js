@@ -1,15 +1,11 @@
 import { Markup } from "telegraf";
 
-export async function depositCommand(ctx) {
-  await ctx.answerCbQuery();
-
-  await ctx.editMessageText("💰 *Choose Deposit Method*", {
+export async function depositMenu(ctx) {
+  await ctx.editMessageText("💰 *Deposit Menu*\n\nChoose a currency:", {
     parse_mode: "Markdown",
-    ...Markup.inlineKeyboard([
+    reply_markup: Markup.inlineKeyboard([
       [Markup.button.callback("₿ Bitcoin (BTC)", "deposit_btc")],
-      [Markup.button.callback("💵 USDT (TRC20)", "deposit_usdt_trc20")],
-      [Markup.button.callback("💵 USDT (ERC20)", "deposit_usdt_erc20")],
-      [Markup.button.callback("⬅ Back to Menu", "main_menu")],
-    ]),
+      [Markup.button.callback("⬅ Back", "main_menu")],
+    ]).reply_markup,
   });
 }

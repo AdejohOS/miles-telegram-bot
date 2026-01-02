@@ -1,69 +1,53 @@
-import { Telegraf } from "telegraf";
-import dotenv from "dotenv";
+import { pool } from "../db.js";
 
-import { startCommand } from "./commands/start.js";
-import { depositCommand } from "./commands/deposit.js";
-import { profileCommand } from "./commands/profile.js";
-import { supportCommand } from "./commands/support.js";
+export async function depositBTC(ctx) {
+  const telegramId = ctx.from.id;
 
-import { addBalance, deductBalance } from "./commands/admin.js";
-import { depositAddress } from "./commands/depositAddress.js";
-import { adminDeposits } from "./commands/adminDeposits.js";
-import { adminMenu } from "./commands/adminMenu.js";
-import { adminOnly } from "./middlewares/adminOnly.js";
+  // Check if user already has an address
+  let res = await pool.query(
+    `SELECT btc_address
+     FROM user_addresses
+     WHERE telegram_id = $1`,
+    [telegramId]
+  );
 
-dotenv.config();
-const bot = new Telegraf(process.env.BOT_TOKEN);
+  let address;
 
-// START
-bot.start(startCommand);
+  if (res.rows.length) {
+    address = res.rows[0].btc_address;
+  } else {
+    // Assign from pool
+    const poolRes = await pool.query(
+      `SELECT btc_address
+       FROM address_pool
+       WHERE used = false
+       LIMIT 1`
+    );
 
-bot.use(async (ctx, next) => {
-  if (ctx.callbackQuery) {
-    await ctx.answerCbQuery().catch(() => {});
+    if (!poolRes.rows.length) {
+      return ctx.reply("⚠️ No deposit addresses available. Contact support.");
+    }
+
+    address = poolRes.rows[0].btc_address;
+
+    await pool.query(
+      `UPDATE address_pool SET used = true WHERE btc_address = $1`,
+      [address]
+    );
+
+    await pool.query(
+      `INSERT INTO user_addresses (telegram_id, btc_address)
+       VALUES ($1, $2)`,
+      [telegramId, address]
+    );
   }
-  return next();
-});
 
-bot.action("deposit", async (ctx) => {
-  await depositCommand(ctx);
-});
-
-bot.action("deposit_btc", (ctx) => depositAddress(ctx, "btc"));
-
-// USDT
-bot.action("deposit_usdt_trc20", (ctx) => depositAddress(ctx, "usdt_trc20"));
-
-bot.action("deposit_usdt_erc20", (ctx) => depositAddress(ctx, "usdt_erc20"));
-
-bot.action("profile", profileCommand);
-bot.action("support", supportCommand);
-
-bot.action("requestWithdrawal", async (ctx) => {
-  await ctx.reply("💁 Withdrawal request feature coming soon.");
-});
-
-bot.action("community", (ctx) => {
-  ctx.reply("🌐 Join our community:\nhttps://t.me/milestraderchat");
-});
-
-bot.action(["shop", "escrow", "orders"], async (ctx) => {
-  await ctx.reply("🚧 This feature is coming soon.");
-});
-
-bot.action("main_menu", startCommand);
-bot.action("deposit_menu", depositCommand);
-
-bot.catch((err, ctx) => {
-  console.error("Bot error:", err);
-});
-
-// ADMIN COMMANDS
-bot.action("admin_menu", adminOnly, adminMenu);
-
-bot.command("addbalance", adminOnly, addBalance);
-bot.command("deductbalance", adminOnly, deductBalance);
-
-// Launch bot
-bot.launch();
-console.log("🤖 Bot is running...");
+  await ctx.editMessageText(
+    `₿ *Bitcoin Deposit*\n\n` +
+      `Send BTC to your personal address:\n\n` +
+      `\`${address}\`\n\n` +
+      `This address is unique to you.\n` +
+      `Deposits are credited after admin verification.`,
+    { parse_mode: "Markdown" }
+  );
+}

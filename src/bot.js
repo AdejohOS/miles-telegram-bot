@@ -26,7 +26,7 @@ bot.use(async (ctx, next) => {
 });
 
 bot.action("deposit", async (ctx) => {
-  await depositCommand(ctx);
+  await depositMenu(ctx);
 });
 
 bot.action("deposit_btc", (ctx) => depositBTC(ctx, "btc"));

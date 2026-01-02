@@ -1,6 +1,6 @@
 import { Markup } from "telegraf";
 
-export async function depositCommand(ctx) {
+export async function depositMenu(ctx) {
   await ctx.answerCbQuery();
 
   await ctx.editMessageText("💰 *Choose Deposit Method*", {

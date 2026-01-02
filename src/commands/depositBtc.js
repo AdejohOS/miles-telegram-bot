@@ -1,3 +1,5 @@
+import { MIN_DEPOSIT_USD } from "../config.js";
+
 export async function depositBTC(ctx) {
   const telegramId = ctx.from.id;
 
@@ -17,11 +19,19 @@ export async function depositBTC(ctx) {
     address = await assignBTCAddress(telegramId);
   }
 
-  await ctx.editMessageText(
+  const text =
     `💰 *BTC Deposit*\n\n` +
-      `Send BTC to your personal address:\n\n` +
-      `\`${address}\`\n\n` +
-      `This address is unique to you.`,
-    { parse_mode: "Markdown" }
-  );
+    `Send BTC to your personal address:\n\n` +
+    `\`${address}\`\n\n` +
+    `💵 *Minimum deposit:* $${MIN_DEPOSIT_USD}\n` +
+    `This address is unique to you.\n\n` +
+    `ℹ Balance updates after payment is completed\n\n` +
+    `📋 _Tap and hold the address to copy_`;
+
+  await ctx.editMessageText(text, {
+    parse_mode: "Markdown",
+    ...Markup.inlineKeyboard([
+      [Markup.button.callback("⬅ Back", "deposit_menu")],
+    ]),
+  });
 }

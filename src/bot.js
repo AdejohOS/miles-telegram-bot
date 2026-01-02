@@ -2,7 +2,7 @@ import { Telegraf } from "telegraf";
 import dotenv from "dotenv";
 
 import { startCommand } from "./commands/start.js";
-import { depositCommand } from "./commands/depositMenu.js";
+import { depositMenu } from "./commands/depositMenu.js";
 import { profileCommand } from "./commands/profile.js";
 import { supportCommand } from "./commands/support.js";
 

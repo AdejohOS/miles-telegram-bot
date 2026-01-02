@@ -1,42 +1,53 @@
-import { Markup } from "telegraf";
 import { pool } from "../db.js";
 
-export async function adminDeposits(ctx) {
-  await ctx.answerCbQuery();
+export async function depositBTC(ctx) {
+  const telegramId = ctx.from.id;
 
-  const res = await pool.query(
-    `SELECT id, telegram_id, coin, amount_usd
-     FROM deposits
-     WHERE status = 'pending'
-     ORDER BY created_at ASC
-     LIMIT 1`
+  // Check if user already has an address
+  let res = await pool.query(
+    `SELECT btc_address
+     FROM user_addresses
+     WHERE telegram_id = $1`,
+    [telegramId]
   );
 
-  if (res.rowCount === 0) {
-    return ctx.editMessageText("✅ No pending deposits.", {
-      ...Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Back", "admin_menu")],
-      ]),
-    });
+  let address;
+
+  if (res.rows.length) {
+    address = res.rows[0].btc_address;
+  } else {
+    // Assign from pool
+    const poolRes = await pool.query(
+      `SELECT btc_address
+       FROM address_pool
+       WHERE used = false
+       LIMIT 1`
+    );
+
+    if (!poolRes.rows.length) {
+      return ctx.reply("⚠️ No deposit addresses available. Contact support.");
+    }
+
+    address = poolRes.rows[0].btc_address;
+
+    await pool.query(
+      `UPDATE address_pool SET used = true WHERE btc_address = $1`,
+      [address]
+    );
+
+    await pool.query(
+      `INSERT INTO user_addresses (telegram_id, btc_address)
+       VALUES ($1, $2)`,
+      [telegramId, address]
+    );
   }
 
-  const d = res.rows[0];
-
-  const text =
-    `⏳ *Pending Deposit*\n\n` +
-    `👤 User: ${d.telegram_id}\n` +
-    `🪙 Coin: ${d.coin}\n` +
-    `💵 Amount: $${d.amount_usd || "N/A"}\n` +
-    `🆔 Deposit ID: ${d.id}`;
-
-  await ctx.editMessageText(text, {
-    parse_mode: "Markdown",
-    ...Markup.inlineKeyboard([
-      [
-        Markup.button.callback("✅ Approve", `admin_approve_${d.id}`),
-        Markup.button.callback("❌ Reject", `admin_reject_${d.id}`),
-      ],
-      [Markup.button.callback("⬅ Back", "admin_menu")],
-    ]),
-  });
+  await ctx.editMessageText(
+    `₿ *Bitcoin Deposit*\n\n` +
+      `Send BTC to your personal address:\n\n` +
+      `\`${address}\`\n\n` +
+      `This address is unique to you.\n` +
+      `Deposits are credited after admin verification.`,
+    { parse_mode: "Markdown" }
+  );
 }

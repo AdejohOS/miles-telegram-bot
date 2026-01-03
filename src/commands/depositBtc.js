@@ -1,4 +1,6 @@
 import { MIN_DEPOSIT_USD } from "../config.js";
+import { Markup } from "telegraf";
+import { pool } from "../db.js";
 
 export async function depositBTC(ctx) {
   const telegramId = ctx.from.id;

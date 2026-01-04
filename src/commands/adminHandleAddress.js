@@ -5,6 +5,9 @@ export async function adminHandleAddress(ctx) {
   if (ctx.session?.step !== "awaiting_address") return;
 
   const address = ctx.message.text.trim();
+  const chatId = ctx.chat.id;
+  const msgId = ctx.session.adminMessageId;
+
   let res, currency;
 
   if (address.startsWith("bc1")) {
@@ -29,15 +32,19 @@ export async function adminHandleAddress(ctx) {
 
   ctx.session = {
     step: "awaiting_amount",
+    adminMessageId: msgId,
     creditUserId: res.rows[0].telegram_id,
     creditCurrency: currency,
   };
 
-  await ctx.reply(
+  await ctx.telegram.editMessageText(
+    chatId,
+    msgId,
+    null,
     `✅ *User Found*\n\n` +
       `Telegram ID: \`${res.rows[0].telegram_id}\`\n` +
       `Currency: ${currency}\n\n` +
-      `Now send the *amount* to credit:`,
+      `Now enter the *amount* to credit:`,
     {
       parse_mode: "Markdown",
       reply_markup: Markup.inlineKeyboard([

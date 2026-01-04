@@ -8,21 +8,25 @@ export async function adminHandleAmount(ctx) {
     return ctx.reply("❌ Invalid amount.");
   }
 
-  const { creditUserId, creditCurrency } = ctx.session;
+  const { adminMessageId, creditUserId, creditCurrency } = ctx.session;
 
   ctx.session = {
     step: "confirm_credit",
+    adminMessageId,
     creditUserId,
     creditCurrency,
     creditAmount: amount,
   };
 
-  await ctx.reply(
+  await ctx.telegram.editMessageText(
+    ctx.chat.id,
+    adminMessageId,
+    null,
     `⚠️ *Confirm Credit*\n\n` +
       `User ID: \`${creditUserId}\`\n` +
       `Currency: ${creditCurrency}\n` +
       `Amount: *${amount}*\n\n` +
-      `Do you want to proceed?`,
+      `Proceed?`,
     {
       parse_mode: "Markdown",
       reply_markup: Markup.inlineKeyboard([

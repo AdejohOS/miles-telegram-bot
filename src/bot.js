@@ -19,6 +19,9 @@ import { adminCreditByAddressStart } from "./commands/adminCreditByAddressStart.
 import { adminHandleAddress } from "./commands/adminHandleAddress.js";
 import { adminHandleAmount } from "./commands/adminHandleAmount.js";
 
+import { adminCreditApprove } from "./commands/adminCreditApprove.js";
+import { adminCreditReject } from "./commands/adminCreditReject.js";
+
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -60,6 +63,9 @@ bot.action("main_menu", startCommand);
 bot.action("admin_menu", adminOnly, adminMenu);
 bot.action("admin_credit_menu", adminOnly, adminCreditMenu);
 bot.action("admin_credit_address", adminOnly, adminCreditByAddressStart);
+
+bot.action("admin_credit_approve", adminOnly, adminCreditApprove);
+bot.action("admin_credit_reject", adminOnly, adminCreditReject);
 
 bot.on("message", async (ctx, next) => {
   if (!ctx.message?.text) return next();

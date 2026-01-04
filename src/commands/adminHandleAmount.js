@@ -1,4 +1,3 @@
-import { pool } from "../db.js";
 import { Markup } from "telegraf";
 
 export async function adminHandleAmount(ctx) {
@@ -11,28 +10,27 @@ export async function adminHandleAmount(ctx) {
 
   const { creditUserId, creditCurrency } = ctx.session;
 
-  await pool.query(
-    `UPDATE users SET balance = balance + $1 WHERE telegram_id = $2`,
-    [amount, creditUserId]
-  );
-
-  await pool.query(
-    `INSERT INTO admin_credits (admin_id, telegram_id, currency, amount)
-     VALUES ($1, $2, $3, $4)`,
-    [ctx.from.id, creditUserId, creditCurrency, amount]
-  );
-
-  ctx.session = null;
-
-  await ctx.reply("✅ *Credit applied successfully.*", {
-    parse_mode: "Markdown",
-    reply_markup: Markup.inlineKeyboard([
-      [Markup.button.callback("⬅ Back to Admin Menu", "admin_menu")],
-    ]).reply_markup,
-  });
-
-  await ctx.telegram.sendMessage(
+  ctx.session = {
+    step: "confirm_credit",
     creditUserId,
-    `🎉 Your ${creditCurrency} deposit has been credited.\nAmount: ${amount}`
+    creditCurrency,
+    creditAmount: amount,
+  };
+
+  await ctx.reply(
+    `⚠️ *Confirm Credit*\n\n` +
+      `User ID: \`${creditUserId}\`\n` +
+      `Currency: ${creditCurrency}\n` +
+      `Amount: *${amount}*\n\n` +
+      `Do you want to proceed?`,
+    {
+      parse_mode: "Markdown",
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback("✅ Approve", "admin_credit_approve"),
+          Markup.button.callback("❌ Reject", "admin_credit_reject"),
+        ],
+      ]).reply_markup,
+    }
   );
 }

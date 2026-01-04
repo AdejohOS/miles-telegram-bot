@@ -1,6 +1,7 @@
 import { Telegraf } from "telegraf";
 import dotenv from "dotenv";
 import { session } from "telegraf/session";
+import { Markup } from "telegraf";
 
 import { startCommand } from "./commands/start.js";
 import { depositMenu } from "./commands/depositMenu.js";
@@ -47,28 +48,6 @@ bot.action("deposit_btc", (ctx) => depositBTC(ctx, "btc"));
 bot.action("deposit_usdt_trc20", (ctx) => depositUSDTTRC20(ctx, "usdt_trc20"));
 //bot.action("deposit_usdt_erc20", (ctx) => depositAddress(ctx, "usdt_erc20"));
 
-bot.action(/^credit_currency_(BTC|USDT)$/, adminOnly, async (ctx) => {
-  const currency = ctx.match[1];
-
-  if (!ctx.session?.creditUserId) {
-    return ctx.answerCbQuery("No user selected.");
-  }
-
-  ctx.session.step = "awaiting_amount";
-  ctx.session.creditCurrency = currency;
-  ctx.session.adminMessageId = ctx.callbackQuery.message.message_id;
-
-  await ctx.editMessageText(
-    `➕ *Credit User*\n\nCurrency: *${currency}*\n\nEnter amount:`,
-    {
-      parse_mode: "Markdown",
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Cancel", "admin_menu")],
-      ]).reply_markup,
-    }
-  );
-});
-
 bot.action("profile", profileCommand);
 bot.action("support", supportCommand);
 
@@ -97,6 +76,28 @@ bot.action("admin_credit_reject", adminOnly, adminCreditReject);
 bot.action("admin_find_user", adminOnly, adminFindUserStart);
 
 bot.action("admin_credit_found_user", adminOnly, adminCreditFromFoundUser);
+
+bot.action(/^credit_currency_(BTC|USDT)$/, adminOnly, async (ctx) => {
+  const currency = ctx.match[1];
+
+  if (!ctx.session?.creditUserId) {
+    return ctx.answerCbQuery("No user selected.");
+  }
+
+  ctx.session.step = "awaiting_amount";
+  ctx.session.creditCurrency = currency;
+  ctx.session.adminMessageId = ctx.callbackQuery.message.message_id;
+
+  await ctx.editMessageText(
+    `➕ *Credit User*\n\nCurrency: *${currency}*\n\nEnter amount to credit:`,
+    {
+      parse_mode: "Markdown",
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Cancel", "admin_menu")],
+      ]).reply_markup,
+    }
+  );
+});
 
 bot.on("message", async (ctx, next) => {
   if (!ctx.message?.text) return next();

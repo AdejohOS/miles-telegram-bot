@@ -1,5 +1,6 @@
 import { Telegraf } from "telegraf";
 import dotenv from "dotenv";
+import session from "telegraf/session";
 
 import { startCommand } from "./commands/start.js";
 import { depositMenu } from "./commands/depositMenu.js";
@@ -12,6 +13,13 @@ import { adminMenu } from "./commands/adminMenu.js";
 import { adminOnly } from "./middlewares/adminOnly.js";
 import { depositBTC } from "./commands/depositBtc.js";
 import { depositUSDTTRC20 } from "./commands/depositUSDTTRC20.js";
+
+import { adminCreditMenu } from "./commands/admin/adminCreditMenu.js";
+import { adminCreditByAddressStart } from "./commands/admin/adminCreditByAddress.js";
+import { adminHandleAddress } from "./commands/admin/adminHandleAddress.js";
+import { adminHandleAmount } from "./commands/admin/adminHandleAmount.js";
+
+bot.use(session());
 
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -58,6 +66,11 @@ bot.catch((err, ctx) => {
 
 // ADMIN COMMANDS
 bot.action("admin_menu", adminOnly, adminMenu);
+
+bot.action("admin_credit_menu", adminOnly, adminCreditMenu);
+bot.action("admin_credit_address", adminOnly, adminCreditByAddressStart);
+bot.on("text", adminOnly, adminHandleAddress);
+bot.on("text", adminOnly, adminHandleAmount);
 
 bot.command("addbalance", adminOnly, addBalance);
 bot.command("deductbalance", adminOnly, deductBalance);

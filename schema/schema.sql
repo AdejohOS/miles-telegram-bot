@@ -36,7 +36,14 @@ ALTER TABLE user_addresses
 ADD COLUMN usdt_trc20_address TEXT UNIQUE;
 
 
-
+CREATE TABLE IF NOT EXISTS admin_credits (
+  id SERIAL PRIMARY KEY,
+  admin_id BIGINT NOT NULL,
+  telegram_id BIGINT NOT NULL,
+  currency TEXT NOT NULL, -- BTC | USDT
+  amount NUMERIC NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
 
 CREATE TABLE IF NOT EXISTS balance_logs (
   id SERIAL PRIMARY KEY,

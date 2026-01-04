@@ -1,6 +1,6 @@
 import { Telegraf } from "telegraf";
 import dotenv from "dotenv";
-import session from "telegraf/session";
+import { session } from "telegraf";
 
 import { startCommand } from "./commands/start.js";
 import { depositMenu } from "./commands/depositMenu.js";
@@ -21,6 +21,9 @@ import { adminHandleAmount } from "./commands/adminHandleAmount.js";
 
 import { adminCreditApprove } from "./commands/adminCreditApprove.js";
 import { adminCreditReject } from "./commands/adminCreditReject.js";
+
+import { adminFindUserStart } from "./commands/adminFindUserStart.js";
+import { adminFindUserHandle } from "./commands/adminFindUserHandle.js";
 
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);

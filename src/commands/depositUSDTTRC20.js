@@ -32,7 +32,11 @@ export async function depositUSDTTRC20(ctx) {
       );
 
       if (!poolRes.rows.length) {
-        throw new Error("No USDT addresses available");
+        return ctx.editMessageText(
+          "⚠️ *USDT deposits are temporarily unavailable.*\n\n" +
+            "Please try again later or contact support.",
+          { parse_mode: "Markdown" }
+        );
       }
 
       address = poolRes.rows[0].tron_address;

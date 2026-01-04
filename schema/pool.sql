@@ -11,6 +11,8 @@ INSERT INTO address_pool (btc_address) VALUES
 ('bc1qaddress10'),
 
 
+
+
 INSERT INTO address_pool_trc20 (tron_address)
 VALUES
 ('TQ9xKpR3J7xxxx'),
@@ -23,3 +25,14 @@ VALUES
 ('TJkD2sG7Y3xxxx'),
 ('TVrH6pK5W0xxxx'),
 ('TNz7Aq91Lmxxxx');
+
+INSERT INTO address_pool_trc20 (tron_address)
+VALUES
+('TxxxxNEW1'),
+('TxxxxNEW2'),
+('TxxxxNEW3'),
+('TxxxxNEW4'),
+('TxxxxNEW5'),
+('TxxxxNEW6'),
+('TxxxxNEW7'),
+('TxxxxNEW8');

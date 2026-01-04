@@ -1,5 +1,6 @@
 import { Markup } from "telegraf";
 import { pool } from "../db.js";
+import { formatBalance } from "../utils/helper.js";
 
 export async function profileCommand(ctx) {
   await ctx.answerCbQuery();
@@ -25,13 +26,14 @@ export async function profileCommand(ctx) {
 
   const joined = new Date(user.created_at).toDateString();
   const username = user.username ? `@${user.username}` : "N/A";
+  const balanceFormatted = formatBalance(user.balance);
 
   const text =
     `👤 *Your Profile*\n\n` +
     `📌 *Username:* ${username}\n` +
     `🆔 *Telegram ID:* ${telegramId}\n` +
     `📅 *Joined:* ${joined}\n\n` +
-    `💰 *Balance:* ${user.balance} USD\n` +
+    `💰 *Balance:* ${balanceFormatted} USD\n` +
     `🔄 *Transactions:* Coming soon\n\n` +
     `✨ _More features coming_`;
 

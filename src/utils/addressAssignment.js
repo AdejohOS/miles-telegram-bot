@@ -14,7 +14,11 @@ export async function assignBTCAddress(telegramId) {
     );
 
     if (!res.rows.length) {
-      throw new Error("No addresses available");
+      return ctx.editMessageText(
+        "⚠️ *BTC deposits are temporarily unavailable.*\n\n" +
+          "Please try again later or contact support.",
+        { parse_mode: "Markdown" }
+      );
     }
 
     const address = res.rows[0].btc_address;

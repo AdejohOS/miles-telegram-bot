@@ -3,7 +3,23 @@ import { pool } from "../db.js";
 import { ADMIN_IDS } from "../config.js";
 
 export async function startCommand(ctx) {
-  const isAdmin = ADMIN_IDS.includes(ctx.from?.id);
+  const telegramId = ctx.from?.id;
+  const username = ctx.from?.username || null;
+  const isAdmin = ADMIN_IDS.includes(telegramId);
+
+  if (!username) {
+    return ctx.reply(
+      "⚠️ *Username Required*\n\n" +
+        "To use this bot, you must set a Telegram username.\n\n" +
+        "📌 How to set it:\n" +
+        "• Open Telegram *Settings*\n" +
+        "• Tap *Username*\n" +
+        "• Create a unique username\n\n" +
+        "After setting it, come back and send /start again.",
+      { parse_mode: "Markdown" }
+    );
+  }
+
   const text =
     "👋 *Welcome!*\n\nUse the menu below to access your wallet, deposit, shop, and escrow services.";
 
@@ -24,19 +40,17 @@ export async function startCommand(ctx) {
       Markup.button.callback("🛠 Admin Panel", "admin_menu"),
     ]);
   }
-  // DB insert ONLY on real /start
+  //  Save user ONLY if username exists
+
   if (ctx.message?.from) {
     try {
-      const telegramId = ctx.from.id;
-      const username = ctx.from.username || null;
-
       await pool.query(
         `
-      INSERT INTO users (telegram_id, username)
-      VALUES ($1, $2)
-      ON CONFLICT (telegram_id)
-      DO UPDATE SET username = EXCLUDED.username
-      `,
+        INSERT INTO users (telegram_id, username)
+        VALUES ($1, $2)
+        ON CONFLICT (telegram_id)
+        DO UPDATE SET username = EXCLUDED.username
+        `,
         [telegramId, username]
       );
     } catch (err) {

@@ -1,7 +1,8 @@
 import { pool } from "../db.js";
+import { Markup } from "telegraf";
 
 export async function adminHandleAddress(ctx) {
-  if (!ctx.session?.awaitingAddress) return;
+  if (ctx.session?.step !== "awaiting_address") return;
 
   const address = ctx.message.text.trim();
   let res, currency;
@@ -19,7 +20,7 @@ export async function adminHandleAddress(ctx) {
       [address]
     );
   } else {
-    return ctx.reply("❌ Unknown address format.");
+    return ctx.reply("❌ Invalid address format.");
   }
 
   if (!res.rows.length) {
@@ -27,7 +28,7 @@ export async function adminHandleAddress(ctx) {
   }
 
   ctx.session = {
-    awaitingAmount: true,
+    step: "awaiting_amount",
     creditUserId: res.rows[0].telegram_id,
     creditCurrency: currency,
   };
@@ -36,7 +37,12 @@ export async function adminHandleAddress(ctx) {
     `✅ *User Found*\n\n` +
       `Telegram ID: \`${res.rows[0].telegram_id}\`\n` +
       `Currency: ${currency}\n\n` +
-      `Send the amount to credit:`,
-    { parse_mode: "Markdown" }
+      `Now send the *amount* to credit:`,
+    {
+      parse_mode: "Markdown",
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Cancel", "admin_menu")],
+      ]).reply_markup,
+    }
   );
 }

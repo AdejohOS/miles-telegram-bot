@@ -9,7 +9,7 @@ export async function adminCreditMenu(ctx) {
     parse_mode: "Markdown",
     ...Markup.inlineKeyboard([
       [Markup.button.callback("➕ Credit by Address", "admin_credit_address")],
-      [Markup.button.callback("⬅ Back to Admin", "admin_menu")],
+      [Markup.button.callback("⬅ Back to Admin Menu", "admin_menu")],
     ]),
   });
 }

@@ -31,7 +31,7 @@ export async function adminFindUserHandle(ctx) {
     telegramId = res.rows[0]?.telegram_id;
   }
 
-  // BTC
+  // BTC address
   else if (input.startsWith("bc1")) {
     foundBy = "BTC Address";
     const res = await pool.query(
@@ -41,7 +41,7 @@ export async function adminFindUserHandle(ctx) {
     telegramId = res.rows[0]?.telegram_id;
   }
 
-  // USDT TRC20
+  // USDT TRC20 address
   else if (input.startsWith("T")) {
     foundBy = "USDT-TRC20 Address";
     const res = await pool.query(
@@ -66,12 +66,19 @@ export async function adminFindUserHandle(ctx) {
     );
   }
 
-  const user = await pool.query(
+  const userRes = await pool.query(
     `SELECT telegram_id, username, balance FROM users WHERE telegram_id = $1`,
     [telegramId]
   );
 
-  ctx.session = null;
+  const user = userRes.rows[0];
+
+  // ✅ KEEP SESSION (VERY IMPORTANT)
+  ctx.session = {
+    step: "found_user",
+    adminMessageId: msgId,
+    creditUserId: telegramId,
+  };
 
   await ctx.telegram.editMessageText(
     chatId,
@@ -79,11 +86,9 @@ export async function adminFindUserHandle(ctx) {
     null,
     `✅ *User Found*\n\n` +
       `Found by: ${foundBy}\n` +
-      `Telegram ID: \`${user.rows[0].telegram_id}\`\n` +
-      `Username: ${
-        user.rows[0].username ? "@" + user.rows[0].username : "N/A"
-      }\n` +
-      `Balance: ${user.rows[0].balance} $`,
+      `Telegram ID: \`${user.telegram_id}\`\n` +
+      `Username: ${user.username ? "@" + user.username : "N/A"}\n` +
+      `Balance: ${user.balance}`,
     {
       parse_mode: "Markdown",
       reply_markup: Markup.inlineKeyboard([

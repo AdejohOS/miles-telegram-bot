@@ -8,20 +8,25 @@ export async function adminCreditApprove(ctx) {
 
   const { creditUserId, creditCurrency, creditAmount } = ctx.session;
 
-  // Apply credit
-  await pool.query(
-    `UPDATE users
-     SET balance = balance + $1
-     WHERE telegram_id = $2`,
-    [creditAmount, creditUserId]
-  );
+  await pool.query("BEGIN");
 
-  // Log credit
-  await pool.query(
-    `INSERT INTO admin_credits (admin_id, telegram_id, currency, amount)
+  try {
+    await pool.query(
+      `UPDATE users SET balance = balance + $1 WHERE telegram_id = $2`,
+      [creditAmount, creditUserId]
+    );
+
+    await pool.query(
+      `INSERT INTO admin_credits (admin_id, telegram_id, currency, amount)
      VALUES ($1, $2, $3, $4)`,
-    [ctx.from.id, creditUserId, creditCurrency, creditAmount]
-  );
+      [ctx.from.id, creditUserId, creditCurrency, creditAmount]
+    );
+
+    await pool.query("COMMIT");
+  } catch (err) {
+    await pool.query("ROLLBACK");
+    throw err;
+  }
 
   ctx.session = null;
 

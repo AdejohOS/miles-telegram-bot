@@ -3,7 +3,7 @@ import { pool } from "../db.js";
 import { formatBalance } from "../utils/helper.js";
 
 export async function profileCommand(ctx) {
-  await ctx.answerCbQuery();
+  await ctx.answerCbQuery?.().catch(() => {});
 
   const telegramId = ctx.from.id;
 

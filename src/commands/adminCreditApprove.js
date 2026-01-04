@@ -6,21 +6,29 @@ export async function adminCreditApprove(ctx) {
     return ctx.answerCbQuery("No pending credit.");
   }
 
-  const { creditUserId, creditCurrency = "MANUAL", creditAmount } = ctx.session;
+  const { creditUserId, creditCurrency = "USDT", creditAmount } = ctx.session;
 
   try {
     await pool.query("BEGIN");
 
+    // ✅ CREDIT PER CURRENCY
     await pool.query(
-      `UPDATE users
-       SET balance = balance + $1
-       WHERE telegram_id = $2`,
-      [creditAmount, creditUserId]
+      `
+      INSERT INTO user_balances (telegram_id, currency, balance)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (telegram_id, currency)
+      DO UPDATE
+      SET balance = user_balances.balance + EXCLUDED.balance
+      `,
+      [creditUserId, creditCurrency, creditAmount]
     );
 
+    // ✅ LOG ADMIN CREDIT
     await pool.query(
-      `INSERT INTO admin_credits (admin_id, telegram_id, currency, amount)
-       VALUES ($1, $2, $3, $4)`,
+      `
+      INSERT INTO admin_credits (admin_id, telegram_id, currency, amount)
+      VALUES ($1, $2, $3, $4)
+      `,
       [ctx.from.id, creditUserId, creditCurrency, creditAmount]
     );
 
@@ -34,7 +42,7 @@ export async function adminCreditApprove(ctx) {
     });
   }
 
-  // clear session AFTER success
+  // 🧼 clear session AFTER success
   ctx.session = null;
 
   await ctx.editMessageText("✅ *Credit approved and applied.*", {
@@ -46,6 +54,6 @@ export async function adminCreditApprove(ctx) {
 
   await ctx.telegram.sendMessage(
     creditUserId,
-    `🎉 Your ${creditCurrency} deposit has been credited.\nAmount: ${creditAmount}`
+    `🎉 Your ${creditCurrency} balance has been credited.\nAmount: ${creditAmount}`
   );
 }

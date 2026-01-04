@@ -22,9 +22,6 @@ import { adminHandleAmount } from "./commands/adminHandleAmount.js";
 import { adminCreditApprove } from "./commands/adminCreditApprove.js";
 import { adminCreditReject } from "./commands/adminCreditReject.js";
 
-import { adminFindUserStart } from "./commands/adminFindUserStart.js";
-import { adminFindUserHandle } from "./commands/adminFindUserHandle.js";
-
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -86,10 +83,6 @@ bot.on("message", async (ctx, next) => {
 
     if (ctx.session.step === "awaiting_amount") {
       return adminHandleAmount(ctx);
-    }
-
-    if (ctx.session?.step === "find_user") {
-      return adminFindUserHandle(ctx);
     }
   }
 

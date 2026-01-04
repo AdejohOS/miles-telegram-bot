@@ -16,8 +16,6 @@ import { depositUSDTTRC20 } from "./commands/depositUSDTTRC20.js";
 
 import { adminCreditMenu } from "./commands/adminCreditMenu.js";
 import { adminCreditByAddressStart } from "./commands/adminCreditByAddressStart.js";
-import { adminHandleAddress } from "./commands/adminHandleAddress.js";
-import { adminHandleAmount } from "./commands/adminHandleAmount.js";
 
 bot.use(session());
 
@@ -69,8 +67,6 @@ bot.action("admin_menu", adminOnly, adminMenu);
 
 bot.action("admin_credit_menu", adminOnly, adminCreditMenu);
 bot.action("admin_credit_address", adminOnly, adminCreditByAddressStart);
-bot.on("text", adminOnly, adminHandleAddress);
-bot.on("text", adminOnly, adminHandleAmount);
 
 bot.command("addbalance", adminOnly, addBalance);
 bot.command("deductbalance", adminOnly, deductBalance);

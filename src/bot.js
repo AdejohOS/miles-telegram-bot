@@ -17,8 +17,6 @@ import { depositUSDTTRC20 } from "./commands/depositUSDTTRC20.js";
 import { adminCreditMenu } from "./commands/adminCreditMenu.js";
 import { adminCreditByAddressStart } from "./commands/adminCreditByAddressStart.js";
 
-bot.use(session());
-
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -31,6 +29,8 @@ bot.use(async (ctx, next) => {
   }
   return next();
 });
+
+bot.use(session());
 
 // BTC
 bot.action("deposit_btc", (ctx) => depositBTC(ctx, "btc"));

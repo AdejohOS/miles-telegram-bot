@@ -55,6 +55,19 @@ CREATE TABLE IF NOT EXISTS user_balances (
     ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS deposit_logs (
+  id SERIAL PRIMARY KEY,
+  telegram_id BIGINT NOT NULL,
+  currency TEXT NOT NULL,         -- 'BTC' | 'USDT'
+  address TEXT NOT NULL,
+  tx_hash TEXT UNIQUE,
+  amount NUMERIC(36,18) NOT NULL,
+  status TEXT DEFAULT 'pending',  -- pending | approved | rejected
+  created_at TIMESTAMP DEFAULT NOW(),
+  approved_at TIMESTAMP
+);
+
+
 
 CREATE TABLE IF NOT EXISTS balance_logs (
   id SERIAL PRIMARY KEY,

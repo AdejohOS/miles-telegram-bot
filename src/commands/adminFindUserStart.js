@@ -1,6 +1,8 @@
 import { Markup } from "telegraf";
 
 export async function adminFindUserStart(ctx) {
+  await ctx.answerCbQuery?.().catch(() => {});
+
   ctx.session = {
     step: "find_user",
     adminMessageId: ctx.callbackQuery.message.message_id,

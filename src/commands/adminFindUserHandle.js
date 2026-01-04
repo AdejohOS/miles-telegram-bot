@@ -12,7 +12,7 @@ export async function adminFindUserHandle(ctx) {
   let telegramId;
   let foundBy;
 
-  // Telegram ID
+  // 1️⃣ Telegram ID
   if (/^\d+$/.test(input)) {
     foundBy = "Telegram ID";
     const res = await pool.query(
@@ -22,7 +22,7 @@ export async function adminFindUserHandle(ctx) {
     telegramId = res.rows[0]?.telegram_id;
   }
 
-  // Username
+  // 2️⃣ Username
   else if (input.startsWith("@")) {
     foundBy = "Username";
     const res = await pool.query(
@@ -32,7 +32,7 @@ export async function adminFindUserHandle(ctx) {
     telegramId = res.rows[0]?.telegram_id;
   }
 
-  // BTC address
+  // 3️⃣ BTC address
   else if (input.startsWith("bc1")) {
     foundBy = "BTC Address";
     const res = await pool.query(
@@ -42,7 +42,7 @@ export async function adminFindUserHandle(ctx) {
     telegramId = res.rows[0]?.telegram_id;
   }
 
-  // USDT TRC20 address
+  // 4️⃣ USDT TRC20 address
   else if (input.startsWith("T")) {
     foundBy = "USDT-TRC20 Address";
     const res = await pool.query(
@@ -50,6 +50,8 @@ export async function adminFindUserHandle(ctx) {
       [input]
     );
     telegramId = res.rows[0]?.telegram_id;
+  } else {
+    return ctx.reply("❌ Invalid search input.");
   }
 
   if (!telegramId) {
@@ -67,14 +69,31 @@ export async function adminFindUserHandle(ctx) {
     );
   }
 
+  // 🔍 Fetch user
   const userRes = await pool.query(
-    `SELECT telegram_id, username, balance FROM users WHERE telegram_id = $1`,
+    `SELECT telegram_id, username FROM users WHERE telegram_id = $1`,
     [telegramId]
   );
 
   const user = userRes.rows[0];
 
-  // ✅ KEEP SESSION (VERY IMPORTANT)
+  // 🔍 Fetch ALL balances
+  const balRes = await pool.query(
+    `SELECT currency, balance
+     FROM user_balances
+     WHERE telegram_id = $1`,
+    [telegramId]
+  );
+
+  let balanceText = "No balances.";
+
+  if (balRes.rows.length) {
+    balanceText = balRes.rows
+      .map((b) => `• ${b.currency}: ${formatBalance(b.balance)}`)
+      .join("\n");
+  }
+
+  // ✅ KEEP SESSION FOR CREDIT
   ctx.session = {
     step: "found_user",
     adminMessageId: msgId,
@@ -88,8 +107,8 @@ export async function adminFindUserHandle(ctx) {
     `✅ *User Found*\n\n` +
       `Found by: ${foundBy}\n` +
       `Telegram ID: \`${user.telegram_id}\`\n` +
-      `Username: ${user.username ? "@" + user.username : "N/A"}\n` +
-      `Balance: ${formatBalance(user.balance)} USD`,
+      `Username: ${user.username ? "@" + user.username : "N/A"}\n\n` +
+      `💰 *Balances*\n${balanceText}`,
     {
       parse_mode: "Markdown",
       reply_markup: Markup.inlineKeyboard([

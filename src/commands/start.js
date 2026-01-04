@@ -27,11 +27,17 @@ export async function startCommand(ctx) {
   // DB insert ONLY on real /start
   if (ctx.message?.from) {
     try {
+      const telegramId = ctx.from.id;
+      const username = ctx.from.username || null;
+
       await pool.query(
-        `INSERT INTO users (telegram_id)
-         VALUES ($1)
-         ON CONFLICT (telegram_id) DO NOTHING`,
-        [ctx.from.id]
+        `
+      INSERT INTO users (telegram_id, username)
+      VALUES ($1, $2)
+      ON CONFLICT (telegram_id)
+      DO UPDATE SET username = EXCLUDED.username
+      `,
+        [telegramId, username]
       );
     } catch (err) {
       console.error("DB error in startCommand:", err);

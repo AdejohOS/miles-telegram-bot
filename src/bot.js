@@ -33,12 +33,10 @@ bot.use(async (ctx, next) => {
 // START
 bot.start(startCommand);
 
-// BTC
+// deposit
+bot.action("deposit_menu", depositMenu);
 bot.action("deposit_btc", (ctx) => depositBTC(ctx, "btc"));
-
-// USDT
 bot.action("deposit_usdt_trc20", (ctx) => depositUSDTTRC20(ctx, "usdt_trc20"));
-
 //bot.action("deposit_usdt_erc20", (ctx) => depositAddress(ctx, "usdt_erc20"));
 
 bot.action("profile", profileCommand);
@@ -57,23 +55,38 @@ bot.action(["shop", "escrow", "orders"], async (ctx) => {
 });
 
 bot.action("main_menu", startCommand);
-bot.action("deposit_menu", depositMenu);
+
+// ADMIN COMMANDS
+bot.action("admin_menu", adminOnly, adminMenu);
+bot.action("admin_credit_menu", adminOnly, adminCreditMenu);
+bot.action("admin_credit_address", adminOnly, adminCreditByAddressStart);
+
+bot.on("message", async (ctx, next) => {
+  if (!ctx.message?.text) return next();
+
+  // Admin multi-step flow
+  if (ctx.session?.step) {
+    // extra safety: admin check here
+    if (!adminOnly(ctx, () => true)) return;
+
+    if (ctx.session.step === "awaiting_address") {
+      return adminHandleAddress(ctx);
+    }
+
+    if (ctx.session.step === "awaiting_amount") {
+      return adminHandleAmount(ctx);
+    }
+  }
+
+  return next();
+});
+
+bot.command("addbalance", adminOnly, addBalance);
+bot.command("deductbalance", adminOnly, deductBalance);
 
 bot.catch((err, ctx) => {
   console.error("Bot error:", err);
 });
-
-// ADMIN COMMANDS
-bot.action("admin_menu", adminOnly, adminMenu);
-
-bot.action("admin_credit_menu", adminOnly, adminCreditMenu);
-bot.action("admin_credit_address", adminOnly, adminCreditByAddressStart);
-
-bot.on("text", adminOnly, adminHandleAddress);
-bot.on("text", adminOnly, adminHandleAmount);
-
-bot.command("addbalance", adminOnly, addBalance);
-bot.command("deductbalance", adminOnly, deductBalance);
 
 // Launch bot
 bot.launch();

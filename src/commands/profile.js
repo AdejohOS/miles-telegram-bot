@@ -7,7 +7,7 @@ export async function profileCommand(ctx) {
   const telegramId = ctx.from.id;
 
   const res = await pool.query(
-    `SELECT balance, created_at
+    `SELECT balance, created_at, username
      FROM users
      WHERE telegram_id = $1`,
     [telegramId]
@@ -24,9 +24,11 @@ export async function profileCommand(ctx) {
   }
 
   const joined = new Date(user.created_at).toDateString();
+  const username = user.username ? `@${user.username}` : "N/A";
 
   const text =
     `👤 *Your Profile*\n\n` +
+    `📌 *Username:* ${username}\n` +
     `🆔 *Telegram ID:* ${telegramId}\n` +
     `📅 *Joined:* ${joined}\n\n` +
     `💰 *Balance:* ${user.balance} USD\n` +

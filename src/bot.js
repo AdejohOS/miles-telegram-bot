@@ -14,10 +14,10 @@ import { adminOnly } from "./middlewares/adminOnly.js";
 import { depositBTC } from "./commands/depositBtc.js";
 import { depositUSDTTRC20 } from "./commands/depositUSDTTRC20.js";
 
-import { adminCreditMenu } from "./commands/admin/adminCreditMenu.js";
-import { adminCreditByAddressStart } from "./commands/admin/adminCreditByAddressStart.js";
-import { adminHandleAddress } from "./commands/admin/adminHandleAddress.js";
-import { adminHandleAmount } from "./commands/admin/adminHandleAmount.js";
+import { adminCreditMenu } from "./commands/adminCreditMenu.js";
+import { adminCreditByAddressStart } from "./commands/adminCreditByAddressStart.js";
+import { adminHandleAddress } from "./commands/adminHandleAddress.js";
+import { adminHandleAmount } from "./commands/adminHandleAmount.js";
 
 bot.use(session());
 

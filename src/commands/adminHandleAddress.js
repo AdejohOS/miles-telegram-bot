@@ -1,4 +1,4 @@
-import { pool } from "../../db.js";
+import { pool } from "../db.js";
 
 export async function adminHandleAddress(ctx) {
   if (!ctx.session?.awaitingAddress) return;

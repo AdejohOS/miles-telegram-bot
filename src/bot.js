@@ -1,6 +1,6 @@
 import { Telegraf } from "telegraf";
 import dotenv from "dotenv";
-import session from "telegraf/session";
+import session from "telegraf";
 
 import { startCommand } from "./commands/start.js";
 import { depositMenu } from "./commands/depositMenu.js";

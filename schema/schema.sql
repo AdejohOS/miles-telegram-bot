@@ -78,16 +78,20 @@ CREATE TABLE IF NOT EXISTS balance_logs (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE deposits (
+CREATE TABLE IF NOT EXISTS transactions (
   id SERIAL PRIMARY KEY,
   telegram_id BIGINT NOT NULL,
-  btc_address TEXT NOT NULL,
-  txid TEXT UNIQUE,
-  amount_btc NUMERIC(18,8),
-  confirmations INTEGER DEFAULT 0,
-  status TEXT CHECK (status IN ('pending', 'confirmed', 'credited')) DEFAULT 'pending',
-  detected_at TIMESTAMP DEFAULT NOW(),
-  credited_at TIMESTAMP
+  currency TEXT NOT NULL,               -- BTC, USDT
+  amount NUMERIC(36,18) NOT NULL,        -- positive or negative
+  type TEXT NOT NULL,                   -- credit, debit
+  source TEXT NOT NULL,                 -- admin, deposit, withdrawal
+  reference TEXT,                       -- tx hash / admin id / note
+  created_at TIMESTAMP DEFAULT NOW(),
+
+  CONSTRAINT fk_user_tx
+    FOREIGN KEY (telegram_id)
+    REFERENCES users (telegram_id)
+    ON DELETE CASCADE
 );
 
 

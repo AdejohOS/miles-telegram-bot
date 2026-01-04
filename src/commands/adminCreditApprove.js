@@ -32,6 +32,15 @@ export async function adminCreditApprove(ctx) {
       [ctx.from.id, creditUserId, creditCurrency, creditAmount]
     );
 
+    await pool.query(
+      `
+  INSERT INTO transactions
+  (telegram_id, currency, amount, type, source, reference)
+  VALUES ($1, $2, $3, 'credit', 'admin', $4)
+  `,
+      [creditUserId, creditCurrency, creditAmount, `admin:${ctx.from.id}`]
+    );
+
     await pool.query("COMMIT");
   } catch (err) {
     await pool.query("ROLLBACK");

@@ -1,6 +1,6 @@
 import { Telegraf } from "telegraf";
 import dotenv from "dotenv";
-import session from "telegraf/session";
+import { session } from "telegraf";
 
 import { startCommand } from "./commands/start.js";
 import { depositMenu } from "./commands/depositMenu.js";
@@ -20,9 +20,7 @@ import { adminCreditByAddressStart } from "./commands/adminCreditByAddressStart.
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// START
-bot.start(startCommand);
-
+bot.use(session());
 bot.use(async (ctx, next) => {
   if (ctx.callbackQuery) {
     await ctx.answerCbQuery().catch(() => {});
@@ -30,7 +28,8 @@ bot.use(async (ctx, next) => {
   return next();
 });
 
-bot.use(session());
+// START
+bot.start(startCommand);
 
 // BTC
 bot.action("deposit_btc", (ctx) => depositBTC(ctx, "btc"));

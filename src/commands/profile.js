@@ -47,9 +47,7 @@ export async function profileCommand(ctx) {
     `Username: ${username}\n` +
     `Telegram ID: ${telegramId}\n` +
     `Joined: ${joined}\n\n` +
-    `💰 *Balances:*\n${balanceText}\n` +
-    `🔄 *Transactions:* Coming soon\n\n` +
-    `✨ _More features coming_`;
+    `💰 *Balances:*\n${balanceText}\n`;
 
   await ctx.editMessageText(text, {
     parse_mode: "Markdown",

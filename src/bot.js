@@ -22,6 +22,9 @@ import { adminHandleAmount } from "./commands/adminHandleAmount.js";
 import { adminCreditApprove } from "./commands/adminCreditApprove.js";
 import { adminCreditReject } from "./commands/adminCreditReject.js";
 
+import { adminFindUserStart } from "./commands/adminFindUserStart.js";
+import { adminFindUserHandle } from "./commands/adminFindUserHandle.js";
+
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -67,6 +70,8 @@ bot.action("admin_credit_address", adminOnly, adminCreditByAddressStart);
 bot.action("admin_credit_approve", adminOnly, adminCreditApprove);
 bot.action("admin_credit_reject", adminOnly, adminCreditReject);
 
+bot.action("admin_find_user", adminOnly, adminFindUserStart);
+
 bot.on("message", async (ctx, next) => {
   if (!ctx.message?.text) return next();
 
@@ -81,6 +86,10 @@ bot.on("message", async (ctx, next) => {
 
     if (ctx.session.step === "awaiting_amount") {
       return adminHandleAmount(ctx);
+    }
+
+    if (ctx.session?.step === "find_user") {
+      return adminFindUserHandle(ctx);
     }
   }
 

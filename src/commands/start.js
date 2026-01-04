@@ -27,37 +27,20 @@ export async function startCommand(ctx) {
   // DB insert ONLY on real /start
   if (ctx.message?.from) {
     try {
+      const telegramId = ctx.from.id;
+      const username = ctx.from.username || null;
+
       await pool.query(
-        `INSERT INTO users (telegram_id)
-         VALUES ($1)
-         ON CONFLICT (telegram_id) DO NOTHING`,
-        [ctx.from.id]
+        `
+      INSERT INTO users (telegram_id, username)
+      VALUES ($1, $2)
+      ON CONFLICT (telegram_id)
+      DO UPDATE SET username = EXCLUDED.username
+      `,
+        [telegramId, username]
       );
     } catch (err) {
       console.error("DB error in startCommand:", err);
     }
-  }
-
-  try {
-    // If coming from inline button → EDIT
-    if (ctx.callbackQuery) {
-      await ctx.answerCbQuery();
-      return await ctx.editMessageText(text, {
-        parse_mode: "Markdown",
-        ...keyboard,
-      });
-    }
-
-    // If coming from /start → REPLY (first message)
-    return await ctx.reply(text, {
-      parse_mode: "Markdown",
-      ...keyboard,
-    });
-  } catch (err) {
-    // Fallback (rare)
-    return await ctx.reply(text, {
-      parse_mode: "Markdown",
-      ...keyboard,
-    });
   }
 }

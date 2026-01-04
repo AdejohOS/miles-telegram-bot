@@ -1,7 +1,6 @@
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   telegram_id BIGINT UNIQUE NOT NULL,
-  balance NUMERIC(18,8) DEFAULT 0,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -44,6 +43,18 @@ CREATE TABLE IF NOT EXISTS admin_credits (
   amount NUMERIC NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS user_balances (
+  telegram_id BIGINT NOT NULL,
+  currency TEXT NOT NULL, -- 'BTC', 'USDT'
+  balance NUMERIC(36,18) DEFAULT 0,
+  PRIMARY KEY (telegram_id, currency),
+  CONSTRAINT fk_user
+    FOREIGN KEY (telegram_id)
+    REFERENCES users (telegram_id)
+    ON DELETE CASCADE
+);
+
 
 CREATE TABLE IF NOT EXISTS balance_logs (
   id SERIAL PRIMARY KEY,

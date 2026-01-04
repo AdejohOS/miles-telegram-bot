@@ -1,5 +1,6 @@
 import { pool } from "../db.js";
 import { Markup } from "telegraf";
+import { formatBalance } from "../utils/helper.js";
 
 export async function adminFindUserHandle(ctx) {
   if (ctx.session?.step !== "find_user") return;
@@ -88,7 +89,7 @@ export async function adminFindUserHandle(ctx) {
       `Found by: ${foundBy}\n` +
       `Telegram ID: \`${user.telegram_id}\`\n` +
       `Username: ${user.username ? "@" + user.username : "N/A"}\n` +
-      `Balance: ${user.balance}`,
+      `Balance: ${formatBalance(user.balance)} USD`,
     {
       parse_mode: "Markdown",
       reply_markup: Markup.inlineKeyboard([

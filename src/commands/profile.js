@@ -7,14 +7,14 @@ export async function profileCommand(ctx) {
 
   const telegramId = ctx.from.id;
 
-  const res = await pool.query(
-    `SELECT balance, created_at, username
+  const userRes = await pool.query(
+    `SELECT  created_at, username
      FROM users
      WHERE telegram_id = $1`,
     [telegramId]
   );
 
-  const user = res.rows[0];
+  const user = userRes.rows[0];
 
   if (!user) {
     return ctx.editMessageText("❌ Profile not found.", {
@@ -24,16 +24,30 @@ export async function profileCommand(ctx) {
     });
   }
 
+  const balRes = await pool.query(
+    `SELECT currency, balance
+     FROM user_balances
+     WHERE telegram_id = $1`,
+    [telegramId]
+  );
+
+  let balanceText = "No balances yet.";
+
+  if (balRes.rows.length) {
+    balanceText = balRes.rows
+      .map((b) => `• ${b.currency}: ${formatBalance(b.balance)}`)
+      .join("\n");
+  }
+
   const joined = new Date(user.created_at).toDateString();
   const username = user.username ? `@${user.username}` : "N/A";
-  const balanceFormatted = formatBalance(user.balance);
 
   const text =
-    `👤 *Your Profile*\n\n` +
-    `📌 *Username:* ${username}\n` +
-    `🆔 *Telegram ID:* ${telegramId}\n` +
-    `📅 *Joined:* ${joined}\n\n` +
-    `💰 *Balance:* ${balanceFormatted} USD\n` +
+    `👤 *Profile*\n\n` +
+    `Username: ${username}\n` +
+    `Telegram ID: ${telegramId}\n` +
+    `Joined: ${joined}\n\n` +
+    `💰 *Balances:*\n${balanceText}\n` +
     `🔄 *Transactions:* Coming soon\n\n` +
     `✨ _More features coming_`;
 

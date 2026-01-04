@@ -21,7 +21,7 @@ export async function startCommand(ctx) {
   }
 
   const text =
-    "👋 *Welcome!*\n\nUse the menu below to access your wallet, deposit, shop, and escrow services.";
+    "👋 *Hello! Welcome to Miles Trader Bot*\n\nBelow are menus for you to access your profile, deposit, withdrawals, shop, support and escrow services.";
 
   const keyboard = Markup.inlineKeyboard([
     [Markup.button.url("🌐 Group Chat", "https://t.me/milestraderchat")],

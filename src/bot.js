@@ -7,10 +7,11 @@ import { profileCommand } from "./commands/profile.js";
 import { supportCommand } from "./commands/support.js";
 
 import { addBalance, deductBalance } from "./commands/admin.js";
-import { depositAddress } from "./commands/depositAddress.js";
+
 import { adminMenu } from "./commands/adminMenu.js";
 import { adminOnly } from "./middlewares/adminOnly.js";
 import { depositBTC } from "./commands/depositBtc.js";
+import { depositUSDTTRC20 } from "./commands/depositUSDTTRC20.js";
 
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -25,12 +26,13 @@ bot.use(async (ctx, next) => {
   return next();
 });
 
+// BTC
 bot.action("deposit_btc", (ctx) => depositBTC(ctx, "btc"));
 
 // USDT
-bot.action("deposit_usdt_trc20", (ctx) => depositAddress(ctx, "usdt_trc20"));
+bot.action("deposit_usdt_trc20", (ctx) => depositUSDTTRC20(ctx, "usdt_trc20"));
 
-bot.action("deposit_usdt_erc20", (ctx) => depositAddress(ctx, "usdt_erc20"));
+//bot.action("deposit_usdt_erc20", (ctx) => depositAddress(ctx, "usdt_erc20"));
 
 bot.action("profile", profileCommand);
 bot.action("support", supportCommand);

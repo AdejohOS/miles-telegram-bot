@@ -34,7 +34,7 @@ export async function depositBTC(ctx) {
   await ctx.editMessageText(text, {
     parse_mode: "Markdown",
     ...Markup.inlineKeyboard([
-      [Markup.button.callback("⬅ Back", "deposit_menu")],
+      [Markup.button.callback("⬅ Back to Deposit Menu", "deposit_menu")],
     ]),
   });
 }

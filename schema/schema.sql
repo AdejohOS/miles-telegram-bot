@@ -24,6 +24,16 @@ CREATE TABLE IF NOT EXISTS address_pool (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS address_pool_trc20 (
+  id SERIAL PRIMARY KEY,
+  tron_address TEXT UNIQUE NOT NULL,
+  used BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+
+ALTER TABLE user_addresses
+ADD COLUMN usdt_trc20_address TEXT UNIQUE;
 
 
 

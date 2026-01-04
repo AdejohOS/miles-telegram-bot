@@ -83,11 +83,12 @@ export async function adminFindUserHandle(ctx) {
       `Username: ${
         user.rows[0].username ? "@" + user.rows[0].username : "N/A"
       }\n` +
-      `Balance: ${user.rows[0].balance}`,
+      `Balance: ${user.rows[0].balance} $`,
     {
       parse_mode: "Markdown",
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Back to Admin Menu", "admin_menu")],
+        [Markup.button.callback("➕ Credit User", "admin_credit_found_user")],
+        [Markup.button.callback("⬅ Back", "admin_menu")],
       ]).reply_markup,
     }
   );

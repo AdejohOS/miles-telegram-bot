@@ -25,6 +25,8 @@ import { adminCreditReject } from "./commands/adminCreditReject.js";
 import { adminFindUserStart } from "./commands/adminFindUserStart.js";
 import { adminFindUserHandle } from "./commands/adminFindUserHandle.js";
 
+import { adminCreditFromFoundUser } from "./commands/adminCreditFromFoundUser.js";
+
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -71,6 +73,8 @@ bot.action("admin_credit_approve", adminOnly, adminCreditApprove);
 bot.action("admin_credit_reject", adminOnly, adminCreditReject);
 
 bot.action("admin_find_user", adminOnly, adminFindUserStart);
+
+bot.action("admin_credit_found_user", adminOnly, adminCreditFromFoundUser);
 
 bot.on("message", async (ctx, next) => {
   if (!ctx.message?.text) return next();

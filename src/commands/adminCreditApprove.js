@@ -6,28 +6,35 @@ export async function adminCreditApprove(ctx) {
     return ctx.answerCbQuery("No pending credit.");
   }
 
-  const { creditUserId, creditCurrency, creditAmount } = ctx.session;
-
-  await pool.query("BEGIN");
+  const { creditUserId, creditCurrency = "MANUAL", creditAmount } = ctx.session;
 
   try {
+    await pool.query("BEGIN");
+
     await pool.query(
-      `UPDATE users SET balance = balance + $1 WHERE telegram_id = $2`,
+      `UPDATE users
+       SET balance = balance + $1
+       WHERE telegram_id = $2`,
       [creditAmount, creditUserId]
     );
 
     await pool.query(
       `INSERT INTO admin_credits (admin_id, telegram_id, currency, amount)
-     VALUES ($1, $2, $3, $4)`,
+       VALUES ($1, $2, $3, $4)`,
       [ctx.from.id, creditUserId, creditCurrency, creditAmount]
     );
 
     await pool.query("COMMIT");
   } catch (err) {
     await pool.query("ROLLBACK");
-    throw err;
+    console.error("Admin credit failed:", err);
+
+    return ctx.editMessageText("❌ *Credit failed.* Please try again.", {
+      parse_mode: "Markdown",
+    });
   }
 
+  // clear session AFTER success
   ctx.session = null;
 
   await ctx.editMessageText("✅ *Credit approved and applied.*", {

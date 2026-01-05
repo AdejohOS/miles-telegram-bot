@@ -30,6 +30,10 @@ import { adminFindUserStart } from "./commands/adminFindUserStart.js";
 import { adminFindUserHandle } from "./commands/adminFindUserHandle.js";
 
 import { adminCreditFromFoundUser } from "./commands/adminCreditFromFoundUser.js";
+import { adminWithdrawals } from "./commands/adminWithdrawals.js";
+import { adminWithdrawApprove } from "./commands/adminWithdrawApprove.js";
+import { adminWithdrawReject } from "./commands/adminWithdrawReject.js";
+import { adminWithdrawPaid } from "./commands/adminWithdrawPaid.js";
 
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -117,6 +121,19 @@ bot.action(/^credit_currency_(BTC|USDT)$/, adminOnly, async (ctx) => {
     }
   );
 });
+
+bot.action("admin_withdrawals", adminOnly, adminWithdrawals);
+bot.action(/withdraw_approve_(\d+)/, adminOnly, (ctx) =>
+  adminWithdrawApprove(ctx, ctx.match[1])
+);
+
+bot.action(/withdraw_reject_(\d+)/, adminOnly, (ctx) =>
+  adminWithdrawReject(ctx, ctx.match[1])
+);
+
+bot.action(/withdraw_paid_(\d+)/, adminOnly, (ctx) =>
+  adminWithdrawPaid(ctx, ctx.match[1])
+);
 
 bot.on("message", async (ctx, next) => {
   if (!ctx.message?.text) return next();

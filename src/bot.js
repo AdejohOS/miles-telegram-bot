@@ -57,6 +57,22 @@ bot.action("support", supportCommand);
 bot.action("profile_transactions", profileTransactions);
 
 bot.action("request_withdrawal", requestWithdrawal);
+bot.action(/^withdraw_currency_(BTC|USDT)$/, async (ctx) => {
+  const currency = ctx.match[1];
+
+  ctx.session.step = "withdraw_amount";
+  ctx.session.currency = currency;
+
+  await ctx.editMessageText(
+    `💁 *Withdrawal*\n\nCurrency: *${currency}*\nEnter amount:`,
+    {
+      parse_mode: "Markdown",
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Cancel", "main_menu")],
+      ]).reply_markup,
+    }
+  );
+});
 
 bot.action("community", (ctx) => {
   ctx.reply("🌐 Join our community:\nhttps://t.me/milestraderchat");

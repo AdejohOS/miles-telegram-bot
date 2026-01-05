@@ -1,5 +1,5 @@
 import { Markup } from "telegraf";
-import pool from "../db.js";
+import { pool } from "../db.js";
 import { formatBalance } from "../utils/helper.js";
 
 export async function profileCommand(ctx) {

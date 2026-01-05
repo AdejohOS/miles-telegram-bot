@@ -9,6 +9,7 @@ import { profileCommand } from "./commands/profile.js";
 import { supportCommand } from "./commands/support.js";
 
 import { profileTransactions } from "./commands/profileTransactions.js";
+import { requestWithdrawal } from "./commands/requestWithdrawal.js";
 
 import { addBalance, deductBalance } from "./commands/admin.js";
 

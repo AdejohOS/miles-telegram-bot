@@ -103,4 +103,24 @@ CREATE TABLE user_addresses (
 );
 
 
+CREATE TABLE IF NOT EXISTS withdrawal_requests (
+  id SERIAL PRIMARY KEY,
+  telegram_id BIGINT NOT NULL,
+  currency TEXT NOT NULL,              -- BTC / USDT
+  amount NUMERIC(36,18) NOT NULL,
+  address TEXT NOT NULL,
+  status TEXT DEFAULT 'pending',       -- pending | approved | rejected | paid
+  created_at TIMESTAMP DEFAULT NOW(),
+  processed_at TIMESTAMP,
+
+  CONSTRAINT fk_user_withdrawal
+    FOREIGN KEY (telegram_id)
+    REFERENCES users (telegram_id)
+    ON DELETE CASCADE
+);
+
+ALTER TABLE user_balances
+ADD COLUMN locked NUMERIC(36,18) DEFAULT 0;
+
+
 

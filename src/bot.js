@@ -55,9 +55,7 @@ bot.action("support", supportCommand);
 
 bot.action("profile_transactions", profileTransactions);
 
-bot.action("requestWithdrawal", async (ctx) => {
-  await ctx.reply("💁 Withdrawal request feature coming soon.");
-});
+bot.action("request_withdrawal", requestWithdrawal);
 
 bot.action("community", (ctx) => {
   ctx.reply("🌐 Join our community:\nhttps://t.me/milestraderchat");

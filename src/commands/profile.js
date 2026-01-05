@@ -1,5 +1,5 @@
 import { Markup } from "telegraf";
-import { pool } from "../db.js";
+import pool from "../db.js";
 import { formatBalance } from "../utils/helper.js";
 
 export async function profileCommand(ctx) {
@@ -8,7 +8,7 @@ export async function profileCommand(ctx) {
   const telegramId = ctx.from.id;
 
   const userRes = await pool.query(
-    `SELECT  created_at, username
+    `SELECT created_at, username
      FROM users
      WHERE telegram_id = $1`,
     [telegramId]
@@ -16,12 +16,24 @@ export async function profileCommand(ctx) {
 
   const user = userRes.rows[0];
 
-  if (!user) {
-    return ctx.editMessageText("❌ Profile not found.", {
-      ...Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Back", "main_menu")],
-      ]),
+  const send = async (text, keyboard) => {
+    if (ctx.callbackQuery?.message) {
+      return ctx.editMessageText(text, {
+        parse_mode: "Markdown",
+        ...keyboard,
+      });
+    }
+    return ctx.reply(text, {
+      parse_mode: "Markdown",
+      ...keyboard,
     });
+  };
+
+  if (!user) {
+    return send(
+      "❌ Profile not found.",
+      Markup.inlineKeyboard([[Markup.button.callback("⬅ Back", "main_menu")]])
+    );
   }
 
   const balRes = await pool.query(
@@ -49,11 +61,11 @@ export async function profileCommand(ctx) {
     `Joined: ${joined}\n\n` +
     `💰 *Balances:*\n${balanceText}\n`;
 
-  await ctx.editMessageText(text, {
-    parse_mode: "Markdown",
-    ...Markup.inlineKeyboard([
+  return send(
+    text,
+    Markup.inlineKeyboard([
       [Markup.button.callback("📜 Transactions", "profile_transactions")],
       [Markup.button.callback("⬅ Back to Menu", "main_menu")],
-    ]),
-  });
+    ])
+  );
 }

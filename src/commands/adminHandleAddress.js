@@ -30,10 +30,12 @@ export async function adminHandleAddress(ctx) {
     return ctx.reply("❌ No user found for this address.");
   }
 
+  const user = res.rows[0];
+
   ctx.session = {
     step: "awaiting_amount",
     adminMessageId: msgId,
-    creditUserId: res.rows[0].telegram_id,
+    creditUserId: user.telegram_id,
     creditCurrency: currency,
   };
 
@@ -42,8 +44,9 @@ export async function adminHandleAddress(ctx) {
     msgId,
     null,
     `✅ *User Found*\n\n` +
-      `Telegram ID: \`${res.rows[0].telegram_id}\`\n` +
-      `Currency: ${currency}\n\n` +
+      ```Telegram ID: \`${res.rows[0].telegram_id}\`\n` +
+      `Currency: ${currency}\n` +
+      `Username: ${user.username ? "@" + user.username : "N/A"}\n\n` +
       `Now enter the *amount* to credit:`,
     {
       parse_mode: "Markdown",

@@ -23,6 +23,13 @@ CREATE TABLE IF NOT EXISTS address_pool (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+ALTER TABLE address_pool
+ADD CONSTRAINT address_pool_btc_unique UNIQUE (btc_address);
+
+ALTER TABLE user_addresses
+ADD CONSTRAINT user_addresses_btc_unique UNIQUE (btc_address);
+
+
 CREATE TABLE IF NOT EXISTS address_pool_trc20 (
   id SERIAL PRIMARY KEY,
   tron_address TEXT UNIQUE NOT NULL,

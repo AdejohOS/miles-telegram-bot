@@ -32,23 +32,19 @@ export async function adminFindUserHandle(ctx) {
     telegramId = res.rows[0]?.telegram_id;
   }
 
-  // 3️⃣ BTC address
-  else if (input.startsWith("bc1")) {
-    foundBy = "BTC Address";
-    const res = await pool.query(
-      `SELECT telegram_id FROM user_addresses WHERE btc_address = $1`,
-      [input]
-    );
-    telegramId = res.rows[0]?.telegram_id;
-  }
+  // 3️⃣ BTC / USDT address (NEW SCHEMA)
+  else if (input.startsWith("bc1") || input.startsWith("T")) {
+    foundBy = "Wallet Address";
 
-  // 4️⃣ USDT TRC20 address
-  else if (input.startsWith("T")) {
-    foundBy = "USDT-TRC20 Address";
     const res = await pool.query(
-      `SELECT telegram_id FROM user_addresses WHERE usdt_trc20_address = $1`,
+      `
+      SELECT telegram_id
+      FROM user_wallets
+      WHERE address = $1
+      `,
       [input]
     );
+
     telegramId = res.rows[0]?.telegram_id;
   } else {
     return ctx.reply("❌ Invalid search input.");
@@ -77,7 +73,7 @@ export async function adminFindUserHandle(ctx) {
 
   const user = userRes.rows[0];
 
-  // 🔍 Fetch ALL balances
+  // 🔍 Fetch balances
   const balRes = await pool.query(
     `SELECT currency, balance
      FROM user_balances

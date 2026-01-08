@@ -6,19 +6,18 @@ import { assignBTCAddress } from "../utils/addressAssignment.js";
 export async function depositBTC(ctx) {
   const telegramId = ctx.from.id;
 
-  let res = await pool.query(
-    `SELECT btc_address
-     FROM user_addresses
-     WHERE telegram_id = $1`,
+  const res = await pool.query(
+    `SELECT address
+     FROM user_wallets
+     WHERE telegram_id = $1 AND currency = 'BTC'`,
     [telegramId]
   );
 
   let address;
 
   if (res.rows.length) {
-    address = res.rows[0].btc_address;
+    address = res.rows[0].address;
   } else {
-    // assign new address (from pool)
     address = await assignBTCAddress(telegramId);
   }
 

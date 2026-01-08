@@ -40,22 +40,31 @@ export async function startCommand(ctx) {
       Markup.button.callback("🛠 Admin Panel", "admin_menu"),
     ]);
   }
-  //  Save user ONLY if username exists
+  //  Save / update user in DB
 
-  if (ctx.message?.from) {
-    try {
-      await pool.query(
-        `
+  try {
+    await pool.query(
+      `
         INSERT INTO users (telegram_id, username)
         VALUES ($1, $2)
         ON CONFLICT (telegram_id)
         DO UPDATE SET username = EXCLUDED.username
-        `,
-        [telegramId, username]
-      );
-    } catch (err) {
-      console.error("DB error in startCommand:", err);
-    }
+      `,
+      [telegramId, username]
+    );
+
+    await pool.query(
+      `
+      INSERT INTO user_balances (telegram_id, currency)
+      VALUES
+        ($1, 'BTC'),
+        ($1, 'USDT')
+      ON CONFLICT (telegram_id, currency) DO NOTHING
+      `,
+      [telegramId]
+    );
+  } catch (err) {
+    console.error("DB error in startCommand:", err);
   }
 
   try {

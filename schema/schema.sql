@@ -1,45 +1,58 @@
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   telegram_id BIGINT UNIQUE NOT NULL,
+  username TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS user_addresses (
-  telegram_id BIGINT PRIMARY KEY,
-  btc_address TEXT UNIQUE NOT NULL,
+CREATE TABLE user_wallets (
+  id SERIAL PRIMARY KEY,
+  telegram_id BIGINT NOT NULL,
+  currency TEXT NOT NULL,          -- BTC, USDT
+  address TEXT NOT NULL,
   created_at TIMESTAMP DEFAULT NOW(),
-  CONSTRAINT fk_user
+
+  CONSTRAINT fk_wallet_user
     FOREIGN KEY (telegram_id)
     REFERENCES users (telegram_id)
-    ON DELETE CASCADE
+    ON DELETE CASCADE,
+
+  CONSTRAINT user_wallet_unique
+    UNIQUE (currency, address)
 );
 
 
-
-CREATE TABLE IF NOT EXISTS address_pool (
+CREATE TABLE address_pool (
   id SERIAL PRIMARY KEY,
-  btc_address TEXT UNIQUE NOT NULL,
-  used BOOLEAN DEFAULT false,
+  currency TEXT NOT NULL CHECK (currency IN ('BTC', 'USDT')),
+  address TEXT UNIQUE NOT NULL,
+  used BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
-ALTER TABLE address_pool
-ADD CONSTRAINT address_pool_btc_unique UNIQUE (btc_address);
-
-ALTER TABLE user_addresses
-ADD CONSTRAINT user_addresses_btc_unique UNIQUE (btc_address);
-
-
-CREATE TABLE IF NOT EXISTS address_pool_trc20 (
+CREATE TABLE user_balances (
   id SERIAL PRIMARY KEY,
-  tron_address TEXT UNIQUE NOT NULL,
-  used BOOLEAN DEFAULT false,
-  created_at TIMESTAMP DEFAULT NOW()
+  telegram_id BIGINT NOT NULL,
+  currency TEXT NOT NULL CHECK (currency IN ('BTC', 'USDT')),
+  balance NUMERIC(20, 8) DEFAULT 0,
+
+  CONSTRAINT fk_user_balance
+    FOREIGN KEY (telegram_id)
+    REFERENCES users (telegram_id)
+    ON DELETE CASCADE,
+
+  CONSTRAINT unique_user_currency
+    UNIQUE (telegram_id, currency)
 );
 
+CREATE INDEX idx_wallet_address ON user_wallets (address);
+CREATE INDEX idx_wallet_user ON user_wallets (telegram_id);
 
-ALTER TABLE user_addresses
-ADD COLUMN usdt_trc20_address TEXT UNIQUE;
+CREATE INDEX idx_pool_currency_used
+ON address_pool (currency, used);
+
+CREATE INDEX idx_balance_user ON user_balances (telegram_id);
+
 
 
 CREATE TABLE IF NOT EXISTS admin_credits (

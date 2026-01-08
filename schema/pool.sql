@@ -1,14 +1,15 @@
-INSERT INTO address_pool (btc_address) VALUES
-('bc1qrp2fnf3gaqr7pwnkey0srynnhq08ergxqg5qqv'),
-('bc1qer2sk3052qgtqxpm6f93c25rp75t4d4aq3x8rz'),
-('bc1qzv7fdxr66k5mg4ljctvvf5vppew2838fuwegml'),
-('bc1qy80xhp4klay2glvy7zxjlhcz7l8znrqq0qzh7n'),
-('bc1qmjmqm5sfqpwzmntw6fyenvqjk8ld2mhpzm3qcs'),
-('bc1quwzy74waqslwzhx5q2caa59nl4vx2mngsghntf'),
-('bc1qngtjdj7nqr0wt8k5s6vg3z6gz38eply3h9vwrv'),
-('bc1qfedven92zpjeeygfypvg48qdq34kj4n3yg9ka7'),
-('bc1qap93cgccgltl9rw6j8dcjralees99fqdl474f9'),
-('bc1q35dnv0q7d29swhjrj2hh6ez7wm8rk0mqwn94nl');
+INSERT INTO address_pool (currency, address)
+VALUES ('BTC', 'bc1qrp2fnf3gaqr7pwnkey0srynnhq08ergxqg5qqv'),
+       ('BTC', 'bc1qer2sk3052qgtqxpm6f93c25rp75t4d4aq3x8rz'),
+       ('BTC', 'bc1qzv7fdxr66k5mg4ljctvvf5vppew2838fuwegml'),
+       ('BTC', 'bc1qy80xhp4klay2glvy7zxjlhcz7l8znrqq0qzh7n'),
+       ('BTC', 'bc1qmjmqm5sfqpwzmntw6fyenvqjk8ld2mhpzm3qcs'),
+       ('BTC', 'bc1quwzy74waqslwzhx5q2caa59nl4vx2mngsghntf'),
+       ('BTC', 'bc1qngtjdj7nqr0wt8k5s6vg3z6gz38eply3h9vwrv'),
+       ('BTC', 'bc1qfedven92zpjeeygfypvg48qdq34kj4n3yg9ka7'),
+       ('BTC', 'bc1qap93cgccgltl9rw6j8dcjralees99fqdl474f9'),
+       ('BTC', 'bc1q35dnv0q7d29swhjrj2hh6ez7wm8rk0mqwn94nl');
+
 
 
 

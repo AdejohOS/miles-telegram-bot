@@ -1,7 +1,3 @@
-import { pool } from "../db.js";
-import { Markup } from "telegraf";
-import { formatBalance } from "../utils/helper.js";
-
 export async function profileTransactions(ctx) {
   await ctx.answerCbQuery?.().catch(() => {});
 
@@ -28,11 +24,11 @@ export async function profileTransactions(ctx) {
   }
 
   const lines = res.rows.map((t) => {
-    const sign = t.type === "credit" ? "+" : "-";
+    const icon = t.type === "credit" ? "➕" : "➖";
     const amt = formatBalance(t.amount);
-    const date = new Date(t.created_at).toLocaleDateString();
+    const date = new Date(t.created_at).toLocaleString();
 
-    return `${date} • ${t.currency} ${sign}${amt} (${t.source})`;
+    return `${date} • ${icon} ${t.currency} ${amt} (${t.source})`;
   });
 
   await ctx.editMessageText(`📜 *Recent Transactions*\n\n${lines.join("\n")}`, {

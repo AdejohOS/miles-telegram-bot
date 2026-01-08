@@ -8,23 +8,21 @@ export async function adminHandleAddress(ctx) {
   const chatId = ctx.chat.id;
   const msgId = ctx.session.adminMessageId;
 
-  let res, currency;
+  let currency;
 
-  if (address.startsWith("bc1")) {
-    currency = "BTC";
-    res = await pool.query(
-      `SELECT telegram_id FROM user_addresses WHERE btc_address = $1`,
-      [address]
-    );
-  } else if (address.startsWith("T")) {
-    currency = "USDT";
-    res = await pool.query(
-      `SELECT telegram_id FROM user_addresses WHERE usdt_trc20_address = $1`,
-      [address]
-    );
-  } else {
-    return ctx.reply("❌ Invalid address format.");
-  }
+  if (address.startsWith("bc1")) currency = "BTC";
+  else if (address.startsWith("T")) currency = "USDT";
+  else return ctx.reply("❌ Invalid address format.");
+
+  const res = await pool.query(
+    `
+    SELECT u.telegram_id, u.username
+    FROM user_wallets w
+    JOIN users u ON u.telegram_id = w.telegram_id
+    WHERE w.address = $1 AND w.currency = $2
+    `,
+    [address, currency]
+  );
 
   if (!res.rows.length) {
     return ctx.reply("❌ No user found for this address.");
@@ -44,7 +42,7 @@ export async function adminHandleAddress(ctx) {
     msgId,
     null,
     `✅ *User Found*\n\n` +
-      ```Telegram ID: \`${res.rows[0].telegram_id}\`\n` +
+      `Telegram ID: \`${user.telegram_id}\`\n` +
       `Currency: ${currency}\n` +
       `Username: ${user.username ? "@" + user.username : "N/A"}\n\n` +
       `Now enter the *amount* to credit:`,

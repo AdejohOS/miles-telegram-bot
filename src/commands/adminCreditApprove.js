@@ -6,13 +6,15 @@ export async function adminCreditApprove(ctx) {
     return ctx.answerCbQuery("No pending credit.");
   }
 
-  const { creditUserId, creditCurrency = "USDT", creditAmount } = ctx.session;
+  const { creditUserId, creditCurrency, creditAmount } = ctx.session;
+
+  const client = await pool.connect();
 
   try {
-    await pool.query("BEGIN");
+    await client.query("BEGIN");
 
-    // ✅ CREDIT PER CURRENCY
-    await pool.query(
+    // ✅ Credit balance
+    await client.query(
       `
       INSERT INTO user_balances (telegram_id, currency, balance)
       VALUES ($1, $2, $3)
@@ -23,8 +25,8 @@ export async function adminCreditApprove(ctx) {
       [creditUserId, creditCurrency, creditAmount]
     );
 
-    // ✅ LOG ADMIN CREDIT
-    await pool.query(
+    // ✅ Admin credit log
+    await client.query(
       `
       INSERT INTO admin_credits (admin_id, telegram_id, currency, amount)
       VALUES ($1, $2, $3, $4)
@@ -32,26 +34,28 @@ export async function adminCreditApprove(ctx) {
       [ctx.from.id, creditUserId, creditCurrency, creditAmount]
     );
 
-    await pool.query(
+    // ✅ Transaction log
+    await client.query(
       `
-  INSERT INTO transactions
-  (telegram_id, currency, amount, type, source, reference)
-  VALUES ($1, $2, $3, 'credit', 'admin', $4)
-  `,
+      INSERT INTO transactions
+      (telegram_id, currency, amount, type, source, reference)
+      VALUES ($1, $2, $3, 'credit', 'admin', $4)
+      `,
       [creditUserId, creditCurrency, creditAmount, `admin:${ctx.from.id}`]
     );
 
-    await pool.query("COMMIT");
+    await client.query("COMMIT");
   } catch (err) {
-    await pool.query("ROLLBACK");
+    await client.query("ROLLBACK");
     console.error("Admin credit failed:", err);
 
     return ctx.editMessageText("❌ *Credit failed.* Please try again.", {
       parse_mode: "Markdown",
     });
+  } finally {
+    client.release();
   }
 
-  // 🧼 clear session AFTER success
   ctx.session = null;
 
   await ctx.editMessageText("✅ *Credit approved and applied.*", {

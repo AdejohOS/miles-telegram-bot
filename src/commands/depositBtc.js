@@ -28,7 +28,7 @@ export async function depositBTC(ctx) {
     `💵 *Minimum deposit:* $${MIN_DEPOSIT_USD}\n` +
     `This address is unique to you.\n\n` +
     `ℹ Balance updates after payment is completed\n\n` +
-    `📋 _Tap and hold the address to copy_`;
+    `📋 _Tap the address to copy_`;
 
   await ctx.editMessageText(text, {
     parse_mode: "Markdown",

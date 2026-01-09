@@ -17,11 +17,7 @@ export async function profileCommand(ctx) {
   const user = userRes.rows[0];
 
   if (!user) {
-    return ctx.editMessageText("❌ Profile not found.", {
-      ...Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Back", "main_menu")],
-      ]),
-    });
+    return ctx.reply("❌ Profile not found.");
   }
 
   const balRes = await pool.query(
@@ -49,11 +45,29 @@ export async function profileCommand(ctx) {
     `Joined: ${joined}\n\n` +
     `💰 *Balances:*\n${balanceText}\n`;
 
-  await ctx.editMessageText(text, {
-    parse_mode: "Markdown",
-    ...Markup.inlineKeyboard([
-      [Markup.button.callback("📜 Transactions", "profile_transactions")],
-      [Markup.button.callback("⬅ Back to Menu", "main_menu")],
-    ]),
-  });
+  const keyboard = Markup.inlineKeyboard([
+    [Markup.button.callback("📜 Transactions", "profile_transactions")],
+    [Markup.button.callback("⬅ Back to Menu", "main_menu")],
+  ]);
+
+  try {
+    // ✅ Edit only if this came from a callback message
+    if (ctx.callbackQuery?.message) {
+      await ctx.editMessageText(text, {
+        parse_mode: "Markdown",
+        reply_markup: keyboard.reply_markup,
+      });
+    } else {
+      await ctx.reply(text, {
+        parse_mode: "Markdown",
+        reply_markup: keyboard.reply_markup,
+      });
+    }
+  } catch (err) {
+    // 🔥 Final safety net
+    await ctx.reply(text, {
+      parse_mode: "Markdown",
+      reply_markup: keyboard.reply_markup,
+    });
+  }
 }

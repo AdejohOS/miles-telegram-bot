@@ -74,7 +74,7 @@ export async function depositUSDTTRC20(ctx) {
     `💵 *Minimum deposit:* $${MIN_DEPOSIT_USD}\n` +
     `⚠️ Do NOT send ERC20/BEP20\n` +
     `ℹ Balance updates after deposit is completed\n\n` +
-    `📋 _Tap and hold the address to copy_`;
+    `📋 _Tap the address to copy_`;
 
   await ctx.editMessageText(text, {
     parse_mode: "Markdown",

@@ -136,10 +136,17 @@ bot.action(/withdraw_paid_(\d+)/, adminOnly, (ctx) =>
 bot.on("message", async (ctx, next) => {
   if (!ctx.message?.text) return next();
 
-  // Admin multi-step flow
-  if (ctx.session?.step) {
-    // extra safety: admin check here
-    if (!adminOnly(ctx, () => true)) return;
+  if (!ctx.session?.step) return next();
+
+  // 🔐 ADMIN flows only
+  if (
+    ["awaiting_address", "awaiting_amount", "find_user"].includes(
+      ctx.session.step
+    )
+  ) {
+    if (!ADMIN_IDS.includes(ctx.from.id)) {
+      return ctx.reply("⛔ Access denied.");
+    }
 
     if (ctx.session.step === "awaiting_address") {
       return adminHandleAddress(ctx);
@@ -148,9 +155,19 @@ bot.on("message", async (ctx, next) => {
     if (ctx.session.step === "awaiting_amount") {
       return adminHandleAmount(ctx);
     }
-    if (ctx.session?.step === "find_user") {
+
+    if (ctx.session.step === "find_user") {
       return adminFindUserHandle(ctx);
     }
+  }
+
+  // 🧍‍♂️ USER flows
+  if (ctx.session.step === "withdraw_amount") {
+    return withdrawAmountHandle(ctx);
+  }
+
+  if (ctx.session.step === "withdraw_address") {
+    return withdrawAddressHandle(ctx);
   }
 
   return next();

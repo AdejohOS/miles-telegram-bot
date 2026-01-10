@@ -8,6 +8,6 @@ export async function withdrawAmountHandle(ctx) {
 
   ctx.session.amount = amount;
   ctx.session.step = "withdraw_address";
-
+  s;
   await ctx.reply("📥 Send destination wallet address:");
 }

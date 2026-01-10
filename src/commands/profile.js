@@ -7,8 +7,9 @@ export async function profileCommand(ctx) {
 
   const telegramId = ctx.from.id;
 
+  // Fetch user
   const userRes = await pool.query(
-    `SELECT  created_at, username
+    `SELECT created_at, username
      FROM users
      WHERE telegram_id = $1`,
     [telegramId]
@@ -20,6 +21,7 @@ export async function profileCommand(ctx) {
     return ctx.reply("❌ Profile not found.");
   }
 
+  // Fetch balances
   const balRes = await pool.query(
     `SELECT currency, balance
      FROM user_balances
@@ -35,7 +37,10 @@ export async function profileCommand(ctx) {
       .join("\n");
   }
 
-  const joined = new Date(user.created_at).toDateString();
+  const joined = user.created_at
+    ? new Date(user.created_at).toDateString()
+    : "N/A";
+
   const username = user.username ? `@${user.username}` : "N/A";
 
   const text =
@@ -50,24 +55,28 @@ export async function profileCommand(ctx) {
     [Markup.button.callback("⬅ Back to Menu", "main_menu")],
   ]);
 
+  const payload = {
+    parse_mode: "Markdown",
+    reply_markup: keyboard.reply_markup,
+  };
+
   try {
-    // ✅ Edit only if this came from a callback message
+    // If triggered by an inline button → try editing
     if (ctx.callbackQuery?.message) {
-      await ctx.editMessageText(text, {
-        parse_mode: "Markdown",
-        reply_markup: keyboard.reply_markup,
-      });
+      try {
+        await ctx.editMessageText(text, payload);
+      } catch {
+        // Telegram refused to edit → delete and resend
+        await ctx.deleteMessage().catch(() => {});
+        await ctx.reply(text, payload);
+      }
     } else {
-      await ctx.reply(text, {
-        parse_mode: "Markdown",
-        reply_markup: keyboard.reply_markup,
-      });
+      // Not a callback → just send
+      await ctx.reply(text, payload);
     }
   } catch (err) {
-    // 🔥 Final safety net
-    await ctx.reply(text, {
-      parse_mode: "Markdown",
-      reply_markup: keyboard.reply_markup,
-    });
+    console.error("Profile display failed:", err);
+    // Last-resort fallback
+    await ctx.reply(text, payload);
   }
 }

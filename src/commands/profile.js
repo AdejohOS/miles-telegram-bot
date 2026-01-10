@@ -3,14 +3,10 @@ import { pool } from "../db.js";
 import { formatBalance } from "../utils/helper.js";
 
 export async function profileCommand(ctx) {
-  console.log(
-    "PROFILE handler called",
-    ctx.update.callback_query?.id || "no callback"
-  );
-
   try {
     const telegramId = ctx.from.id;
 
+    // Fetch user
     const userRes = await pool.query(
       `SELECT created_at, username
        FROM users
@@ -24,6 +20,7 @@ export async function profileCommand(ctx) {
       return ctx.reply("❌ Profile not found.");
     }
 
+    // Fetch balances
     const balRes = await pool.query(
       `SELECT currency, balance
        FROM user_balances
@@ -46,24 +43,35 @@ export async function profileCommand(ctx) {
     const username = user.username ? `@${user.username}` : "N/A";
 
     const text =
-      `👤 *Profile*\n\n` +
+      `👤 <b>Profile</b>\n\n` +
       `Username: ${username}\n` +
       `Telegram ID: ${telegramId}\n` +
       `Joined: ${joined}\n\n` +
-      `💰 *Balances:*\n${balanceText}\n`;
+      `💰 <b>Balances:</b>\n${balanceText}`;
 
-    await ctx.reply(text, {
-      parse_mode: "Markdown",
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("📜 Transactions", "profile_transactions")],
-        [Markup.button.callback("⬅ Back to Menu", "main_menu")],
-      ]).reply_markup,
-    });
+    const keyboard = Markup.inlineKeyboard([
+      [Markup.button.callback("📜 Transactions", "profile_transactions")],
+      [Markup.button.callback("⬅ Back to Menu", "main_menu")],
+    ]);
 
-    // Now safely acknowledge callback
-    await ctx.answerCbQuery?.().catch(() => {});
-  } catch (error) {
-    console.error("PROFILE handler crashed:", error);
-    await ctx.reply("❌ Profile failed. Check logs.");
+    const payload = {
+      parse_mode: "HTML",
+      reply_markup: keyboard.reply_markup,
+    };
+
+    if (ctx.callbackQuery?.message) {
+      try {
+        await ctx.editMessageText(text, payload);
+        await ctx.answerCbQuery().catch(() => {});
+      } catch {
+        // If Telegram refuses edit → send new
+        await ctx.reply(text, payload);
+      }
+    } else {
+      await ctx.reply(text, payload);
+    }
+  } catch (err) {
+    console.error("Profile failed:", err);
+    await ctx.reply("❌ Failed to load profile.");
   }
 }

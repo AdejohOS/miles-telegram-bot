@@ -3,9 +3,10 @@ import { pool } from "../db.js";
 import { formatBalance } from "../utils/helper.js";
 
 export async function profileCommand(ctx) {
+  await ctx.answerCbQuery?.().catch(() => {});
+
   const telegramId = ctx.from.id;
 
-  // Fetch user
   const userRes = await pool.query(
     `SELECT created_at, username
      FROM users
@@ -19,7 +20,6 @@ export async function profileCommand(ctx) {
     return ctx.reply("❌ Profile not found.");
   }
 
-  // Fetch balances
   const balRes = await pool.query(
     `SELECT currency, balance
      FROM user_balances
@@ -48,28 +48,11 @@ export async function profileCommand(ctx) {
     `Joined: ${joined}\n\n` +
     `💰 *Balances:*\n${balanceText}\n`;
 
-  const keyboard = Markup.inlineKeyboard([
-    [Markup.button.callback("📜 Transactions", "profile_transactions")],
-    [Markup.button.callback("⬅ Back to Menu", "main_menu")],
-  ]);
-
-  const payload = {
+  await ctx.reply(text, {
     parse_mode: "Markdown",
-    reply_markup: keyboard.reply_markup,
-  };
-
-  try {
-    if (ctx.callbackQuery?.message?.text) {
-      // First edit
-      await ctx.editMessageText(text, payload);
-
-      // Then answer callback (no more Telegram blocking)
-      await ctx.answerCbQuery().catch(() => {});
-    } else {
-      await ctx.reply(text, payload);
-    }
-  } catch (err) {
-    console.error("Profile display failed:", err);
-    await ctx.reply(text, payload);
-  }
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback("📜 Transactions", "profile_transactions")],
+      [Markup.button.callback("⬅ Back to Menu", "main_menu")],
+    ]).reply_markup,
+  });
 }

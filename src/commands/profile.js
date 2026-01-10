@@ -3,8 +3,6 @@ import { pool } from "../db.js";
 import { formatBalance } from "../utils/helper.js";
 
 export async function profileCommand(ctx) {
-  await ctx.answerCbQuery?.().catch(() => {});
-
   const telegramId = ctx.from.id;
 
   // Fetch user
@@ -61,22 +59,17 @@ export async function profileCommand(ctx) {
   };
 
   try {
-    // If triggered by an inline button → try editing
-    if (ctx.callbackQuery?.message) {
-      try {
-        await ctx.editMessageText(text, payload);
-      } catch {
-        // Telegram refused to edit → delete and resend
-        await ctx.deleteMessage().catch(() => {});
-        await ctx.reply(text, payload);
-      }
+    if (ctx.callbackQuery?.message?.text) {
+      // First edit
+      await ctx.editMessageText(text, payload);
+
+      // Then answer callback (no more Telegram blocking)
+      await ctx.answerCbQuery().catch(() => {});
     } else {
-      // Not a callback → just send
       await ctx.reply(text, payload);
     }
   } catch (err) {
     console.error("Profile display failed:", err);
-    // Last-resort fallback
     await ctx.reply(text, payload);
   }
 }

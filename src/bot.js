@@ -68,14 +68,12 @@ bot.action(/^withdraw_currency_(BTC|USDT)$/, async (ctx) => {
   ctx.session.currency = currency;
 
   await ctx.editMessageText(
-    `💁 *Withdrawal*\n\nCurrency: *${currency}*\nEnter amount:`,
-    {
-      parse_mode: "Markdown",
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Cancel", "main_menu")],
-      ]).reply_markup,
-    }
+    `💁 <b>Withdrawal</b>\n\nCurrency: <b>${currency}</b>\nEnter amount:`,
+    { parse_mode: "HTML" }
   );
+
+  // 🔑 This is REQUIRED
+  await ctx.answerCbQuery().catch(() => {});
 });
 
 bot.action("community", (ctx) => {

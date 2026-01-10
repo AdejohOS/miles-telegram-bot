@@ -16,4 +16,6 @@ export async function requestWithdrawal(ctx) {
       [Markup.button.callback("⬅ Cancel", "main_menu")],
     ]).reply_markup,
   });
+
+  await ctx.answerCbQuery().catch(() => {});
 }

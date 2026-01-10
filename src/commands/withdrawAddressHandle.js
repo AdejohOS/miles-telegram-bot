@@ -7,11 +7,13 @@ export async function withdrawAddressHandle(ctx) {
   const address = ctx.message.text.trim();
   const telegramId = ctx.from.id;
 
-  try {
-    await pool.query("BEGIN");
+  const client = await pool.connect();
 
-    // Check available balance
-    const balRes = await pool.query(
+  try {
+    await client.query("BEGIN");
+
+    // 🔒 Lock the user's balance row
+    const balRes = await client.query(
       `
       SELECT balance, locked
       FROM user_balances
@@ -21,17 +23,20 @@ export async function withdrawAddressHandle(ctx) {
       [telegramId, currency]
     );
 
-    if (!balRes.rows.length) throw new Error("No balance");
-
-    const available =
-      Number(balRes.rows[0].balance) - Number(balRes.rows[0].locked);
-
-    if (amount > available) {
-      throw new Error("Insufficient balance");
+    if (!balRes.rows.length) {
+      throw new Error("No balance found");
     }
 
-    // Lock funds
-    await pool.query(
+    const balance = Number(balRes.rows[0].balance);
+    const locked = Number(balRes.rows[0].locked);
+    const available = balance - locked;
+
+    if (amount > available) {
+      throw new Error("Insufficient available balance");
+    }
+
+    // 🔒 Lock funds
+    await client.query(
       `
       UPDATE user_balances
       SET locked = locked + $1
@@ -40,8 +45,8 @@ export async function withdrawAddressHandle(ctx) {
       [amount, telegramId, currency]
     );
 
-    // Create request
-    await pool.query(
+    // 📝 Create withdrawal request
+    await client.query(
       `
       INSERT INTO withdrawal_requests
       (telegram_id, currency, amount, address)
@@ -50,10 +55,13 @@ export async function withdrawAddressHandle(ctx) {
       [telegramId, currency, amount, address]
     );
 
-    await pool.query("COMMIT");
+    await client.query("COMMIT");
   } catch (err) {
-    await pool.query("ROLLBACK");
+    await client.query("ROLLBACK");
+    console.error("Withdraw failed:", err);
     return ctx.reply("❌ Withdrawal failed: " + err.message);
+  } finally {
+    client.release();
   }
 
   ctx.session = null;

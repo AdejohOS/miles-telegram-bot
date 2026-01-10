@@ -7,16 +7,14 @@ export async function profileCommand(ctx) {
     "PROFILE handler called",
     ctx.update.callback_query?.id || "no callback"
   );
-  console.log("PROFILE handler called");
-  await ctx.answerCbQuery?.().catch(() => {});
 
   try {
     const telegramId = ctx.from.id;
 
     const userRes = await pool.query(
       `SELECT created_at, username
-     FROM users
-     WHERE telegram_id = $1`,
+       FROM users
+       WHERE telegram_id = $1`,
       [telegramId]
     );
 
@@ -28,8 +26,8 @@ export async function profileCommand(ctx) {
 
     const balRes = await pool.query(
       `SELECT currency, balance
-     FROM user_balances
-     WHERE telegram_id = $1`,
+       FROM user_balances
+       WHERE telegram_id = $1`,
       [telegramId]
     );
 
@@ -61,8 +59,11 @@ export async function profileCommand(ctx) {
         [Markup.button.callback("⬅ Back to Menu", "main_menu")],
       ]).reply_markup,
     });
+
+    // Now safely acknowledge callback
+    await ctx.answerCbQuery?.().catch(() => {});
   } catch (error) {
-    console.error("PROFILE handler crashed:", err);
+    console.error("PROFILE handler crashed:", error);
     await ctx.reply("❌ Profile failed. Check logs.");
   }
 }

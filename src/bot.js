@@ -35,6 +35,9 @@ import { adminWithdrawApprove } from "./commands/adminWithdrawApprove.js";
 import { adminWithdrawReject } from "./commands/adminWithdrawReject.js";
 import { adminWithdrawPaid } from "./commands/adminWithdrawPaid.js";
 
+import { withdrawAmountHandle } from "./commands/withdrawAmountHandle.js";
+import { withdrawAddressHandle } from "./commands/withdrawAddressHandle.js";
+
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 

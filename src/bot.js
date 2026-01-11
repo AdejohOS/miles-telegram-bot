@@ -42,6 +42,8 @@ import { adminShopMenu } from "./commands/adminShopMenu.js";
 import { withdrawAmountHandle } from "./commands/withdrawAmountHandle.js";
 import { withdrawAddressHandle } from "./commands/withdrawAddressHandle.js";
 
+import { shopQuantityHandle, shopConfirmHandle } from "./commands/shopFlow.js";
+
 import {
   addItemTitle,
   addItemPrice,
@@ -230,6 +232,14 @@ bot.on("message", async (ctx, next) => {
     if (ctx.session.step === "awaiting_address") return adminHandleAddress(ctx);
     if (ctx.session.step === "awaiting_amount") return adminHandleAmount(ctx);
     if (ctx.session.step === "find_user") return adminFindUserHandle(ctx);
+  }
+
+  if (ctx.session.step === "shop_quantity") {
+    return shopQuantityHandle(ctx);
+  }
+
+  if (ctx.session.step === "shop_confirm") {
+    return shopConfirmHandle(ctx);
   }
 
   return next();

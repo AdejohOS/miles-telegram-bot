@@ -1,5 +1,6 @@
 import { pool } from "../db.js";
 import { Markup } from "telegraf";
+import { formatBalance } from "../utils/helper.js";
 
 export async function shopMenu(ctx) {
   await ctx.answerCbQuery?.().catch(() => {});
@@ -22,7 +23,10 @@ export async function shopMenu(ctx) {
   }
 
   const lines = res.rows.map(
-    (i) => `#${i.id} — ${i.title} (${i.price} ${i.currency}, Stock: ${i.stock})`
+    (i) =>
+      `#${i.id} — ${i.title} (${formatBalance(i.price)} ${i.currency}, Stock: ${
+        i.stock
+      })`
   );
 
   await ctx.editMessageText("🛒 <b>Shop</b>\n\n" + lines.join("\n"), {
@@ -30,7 +34,7 @@ export async function shopMenu(ctx) {
     reply_markup: Markup.inlineKeyboard(
       res.rows
         .map((i) => [Markup.button.callback(`Buy ${i.title}`, `buy_${i.id}`)])
-        .concat([[Markup.button.callback("⬅ Back", "main_menu")]])
+        .concat([[Markup.button.callback("⬅ Back to Main Menu", "main_menu")]])
     ).reply_markup,
   });
 }

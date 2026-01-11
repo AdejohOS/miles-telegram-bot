@@ -2,6 +2,7 @@ import { Telegraf } from "telegraf";
 import dotenv from "dotenv";
 import { session } from "telegraf/session";
 import { Markup } from "telegraf";
+import { ADMIN_IDS } from "./config.js";
 
 import { startCommand } from "./commands/start.js";
 import { depositMenu } from "./commands/depositMenu.js";

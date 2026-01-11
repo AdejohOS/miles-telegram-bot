@@ -16,7 +16,7 @@ export async function shopMenu(ctx) {
   if (!res.rows.length) {
     return ctx.editMessageText("🛒 Shop is empty right now.", {
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Back", "main_menu")],
+        [Markup.button.callback("⬅ Back to Main Menu", "main_menu")],
       ]).reply_markup,
     });
   }

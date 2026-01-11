@@ -36,6 +36,8 @@ import { adminWithdrawApprove } from "./commands/adminWithdrawApprove.js";
 import { adminWithdrawReject } from "./commands/adminWithdrawReject.js";
 import { adminWithdrawPaid } from "./commands/adminWithdrawPaid.js";
 
+import { adminShopMenu } from "./commands/adminShopMenu.js";
+
 import { withdrawAmountHandle } from "./commands/withdrawAmountHandle.js";
 import { withdrawAddressHandle } from "./commands/withdrawAddressHandle.js";
 
@@ -61,6 +63,21 @@ bot.action("deposit_usdt_trc20", (ctx) => depositUSDTTRC20(ctx, "usdt_trc20"));
 
 bot.action("profile", profileCommand);
 bot.action("shop_menu", shopMenu);
+bot.action(/buy_(\d+)/, async (ctx) => {
+  const itemId = ctx.match[1];
+
+  ctx.session = {
+    step: "shop_quantity",
+    itemId,
+  };
+
+  await ctx.editMessageText("Enter quantity to buy:", {
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback("⬅ Cancel", "shop")],
+    ]).reply_markup,
+  });
+});
+
 bot.action("support", supportCommand);
 
 bot.action("profile_transactions", profileTransactions);
@@ -93,6 +110,13 @@ bot.action("main_menu", startCommand);
 
 // ADMIN COMMANDS
 bot.action("admin_menu", adminOnly, adminMenu);
+
+bot.action("admin_shop_menu", adminOnly, adminShopMenu);
+bot.action("admin_add_item", adminOnly, async (ctx) => {
+  ctx.session = { step: "add_item_title" };
+  await ctx.editMessageText("Enter item title:");
+});
+
 bot.action("admin_credit_menu", adminOnly, adminCreditMenu);
 bot.action("admin_credit_address", adminOnly, adminCreditByAddressStart);
 

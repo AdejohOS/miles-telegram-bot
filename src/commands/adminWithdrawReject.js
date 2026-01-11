@@ -1,27 +1,27 @@
 import { pool } from "../db.js";
-import { Markup } from "telegraf";
 
-export async function adminWithdrawReject(ctx, withdrawalId) {
+export async function adminWithdrawReject(ctx, id) {
+  const client = await pool.connect();
+
   try {
-    await pool.query("BEGIN");
+    await client.query("BEGIN");
 
-    const res = await pool.query(
+    const res = await client.query(
       `
-      SELECT telegram_id, currency, amount, status
+      SELECT telegram_id, currency, amount
       FROM withdrawal_requests
-      WHERE id = $1
-      FOR UPDATE 
+      WHERE id = $1 AND status = 'pending'
+      FOR UPDATE
       `,
-      [withdrawalId]
+      [id]
     );
 
-    if (!res.rows.length || res.rows[0].status !== "pending") {
-      throw new Error("Invalid withdrawal");
-    }
+    if (!res.rows.length) throw new Error("Invalid");
 
     const { telegram_id, currency, amount } = res.rows[0];
 
-    await pool.query(
+    // Unlock funds
+    await client.query(
       `
       UPDATE user_balances
       SET locked = locked - $1
@@ -30,29 +30,23 @@ export async function adminWithdrawReject(ctx, withdrawalId) {
       [amount, telegram_id, currency]
     );
 
-    await pool.query(
+    // Mark rejected
+    await client.query(
       `
       UPDATE withdrawal_requests
       SET status = 'rejected', processed_at = NOW()
       WHERE id = $1
       `,
-      [withdrawalId]
+      [id]
     );
 
-    await pool.query("COMMIT");
+    await client.query("COMMIT");
 
-    await ctx.telegram.sendMessage(
-      telegram_id,
-      `❌ Your ${currency} withdrawal of ${amount} was rejected.`
-    );
-
-    await ctx.editMessageText("❌ Withdrawal rejected.", {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Back", "admin_menu")],
-      ]).reply_markup,
-    });
+    await ctx.editMessageText(`❌ Withdrawal #${id} rejected.`);
   } catch (err) {
-    await pool.query("ROLLBACK");
-    return ctx.editMessageText("❌ Rejection failed.");
+    await client.query("ROLLBACK");
+    await ctx.editMessageText("❌ Reject failed.");
+  } finally {
+    client.release();
   }
 }

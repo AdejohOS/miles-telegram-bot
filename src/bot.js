@@ -41,6 +41,13 @@ import { adminShopMenu } from "./commands/adminShopMenu.js";
 import { withdrawAmountHandle } from "./commands/withdrawAmountHandle.js";
 import { withdrawAddressHandle } from "./commands/withdrawAddressHandle.js";
 
+import {
+  addItemTitle,
+  addItemPrice,
+  addItemCurrency,
+  addItemStock,
+} from "./commands/adminShopAdd.js";
+
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -197,6 +204,31 @@ bot.on("message", async (ctx, next) => {
 
   if (ctx.session.step === "withdraw_address") {
     return withdrawAddressHandle(ctx);
+  }
+
+  const adminSteps = [
+    "add_item_title",
+    "add_item_price",
+    "add_item_currency",
+    "add_item_stock",
+    "awaiting_address",
+    "awaiting_amount",
+    "find_user",
+  ];
+
+  if (adminSteps.includes(ctx.session.step)) {
+    if (!ADMIN_IDS.includes(ctx.from.id)) {
+      return ctx.reply("⛔ Access denied.");
+    }
+
+    if (ctx.session.step === "add_item_title") return addItemTitle(ctx);
+    if (ctx.session.step === "add_item_price") return addItemPrice(ctx);
+    if (ctx.session.step === "add_item_currency") return addItemCurrency(ctx);
+    if (ctx.session.step === "add_item_stock") return addItemStock(ctx);
+
+    if (ctx.session.step === "awaiting_address") return adminHandleAddress(ctx);
+    if (ctx.session.step === "awaiting_amount") return adminHandleAmount(ctx);
+    if (ctx.session.step === "find_user") return adminFindUserHandle(ctx);
   }
 
   return next();

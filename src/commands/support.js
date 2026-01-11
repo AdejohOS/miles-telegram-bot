@@ -9,7 +9,12 @@ export async function supportCommand(ctx) {
       {
         parse_mode: "Markdown",
         ...Markup.inlineKeyboard([
-          [Markup.button.url("💬 Chat with Support", "https://t.me/D_dls25")],
+          [
+            Markup.button.url(
+              "💬 Chat with Support",
+              "https://t.me/miles_Trader_support"
+            ),
+          ],
           [Markup.button.callback("⬅ Back to Menu", "main_menu")],
         ]),
       }

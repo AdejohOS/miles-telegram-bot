@@ -7,6 +7,7 @@ import { startCommand } from "./commands/start.js";
 import { depositMenu } from "./commands/depositMenu.js";
 import { profileCommand } from "./commands/profile.js";
 import { supportCommand } from "./commands/support.js";
+import { shopMenu } from "./commands/shopMenu.js";
 
 import { profileTransactions } from "./commands/profileTransactions.js";
 import { requestWithdrawal } from "./commands/requestWithdrawal.js";
@@ -59,6 +60,7 @@ bot.action("deposit_usdt_trc20", (ctx) => depositUSDTTRC20(ctx, "usdt_trc20"));
 //bot.action("deposit_usdt_erc20", (ctx) => depositAddress(ctx, "usdt_erc20"));
 
 bot.action("profile", profileCommand);
+bot.action("shop_menu", shopMenu);
 bot.action("support", supportCommand);
 
 bot.action("profile_transactions", profileTransactions);

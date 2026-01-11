@@ -32,7 +32,7 @@ export async function startCommand(ctx) {
       Markup.button.callback("➖ Withdrawal", "request_withdrawal"),
     ],
 
-    [Markup.button.callback("🛒 Shop", "shop")],
+    [Markup.button.callback("🛒 Shop", "shop_menu")],
     [Markup.button.callback("🤝 Escrow", "escrow")],
     [Markup.button.callback("📜 My Orders", "orders")],
     [Markup.button.callback("📞 Support", "support")],

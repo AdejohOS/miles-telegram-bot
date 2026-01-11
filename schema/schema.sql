@@ -143,4 +143,36 @@ ALTER TABLE user_balances
 ADD COLUMN locked NUMERIC(36,18) DEFAULT 0;
 
 
+-- shop
+
+CREATE TABLE shop_items (
+  id SERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  price NUMERIC(20,8) NOT NULL,
+  currency TEXT NOT NULL,     -- BTC or USDT
+  stock INTEGER DEFAULT 0,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE shop_orders (
+  id SERIAL PRIMARY KEY,
+  telegram_id BIGINT NOT NULL,
+  item_id INTEGER NOT NULL,
+  quantity INTEGER NOT NULL,
+  price NUMERIC(20,8) NOT NULL,
+  currency TEXT NOT NULL,
+  status TEXT DEFAULT 'pending',  -- pending, paid, delivered, cancelled
+  created_at TIMESTAMP DEFAULT NOW(),
+
+  CONSTRAINT fk_user_order FOREIGN KEY (telegram_id)
+    REFERENCES users(telegram_id) ON DELETE CASCADE,
+
+  CONSTRAINT fk_item_order FOREIGN KEY (item_id)
+    REFERENCES shop_items(id)
+);
+
+
+
 

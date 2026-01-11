@@ -80,7 +80,7 @@ bot.action(/^withdraw_currency_(BTC|USDT)$/, async (ctx) => {
 });
 
 bot.action("community", (ctx) => {
-  ctx.reply("🌐 Join our community:\nhttps://t.me/milestraderchat");
+  ctx.reply("🌐 Join our community:\nhttps://t.me/miles_Trader_support");
 });
 
 bot.action(["shop", "escrow", "orders"], async (ctx) => {

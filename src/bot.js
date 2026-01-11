@@ -83,7 +83,7 @@ bot.action(/buy_(\d+)/, async (ctx) => {
 
   await ctx.editMessageText("Enter quantity to buy:", {
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.callback("⬅ Cancel", "shop")],
+      [Markup.button.callback("⬅ Cancel", "shop_menu")],
     ]).reply_markup,
   });
 });

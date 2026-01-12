@@ -45,6 +45,8 @@ import { withdrawAddressHandle } from "./commands/withdrawAddressHandle.js";
 import { shopQuantityHandle, shopConfirmHandle } from "./commands/shopFlow.js";
 import { shopSearchHandle } from "./commands/shopSearchHandle.js";
 
+import { adminDebit } from "./commands/adminDebit.js";
+
 import {
   addItemTitle,
   addItemPrice,
@@ -197,6 +199,8 @@ bot.action(/withdraw_reject_(\d+)/, adminOnly, (ctx) =>
 bot.action(/withdraw_paid_(\d+)/, adminOnly, (ctx) =>
   adminWithdrawPaid(ctx, ctx.match[1])
 );
+
+bot.command("admin_debit", adminOnly, adminDebit);
 
 bot.on("message", async (ctx, next) => {
   if (!ctx.message?.text) return next();

@@ -173,6 +173,15 @@ CREATE TABLE shop_orders (
     REFERENCES shop_items(id)
 );
 
+CREATE TABLE admin_debits (
+  id SERIAL PRIMARY KEY,
+  admin_id BIGINT NOT NULL,
+  telegram_id BIGINT NOT NULL,
+  currency TEXT NOT NULL,
+  amount NUMERIC(36,18) NOT NULL,
+  reason TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
 
 
 

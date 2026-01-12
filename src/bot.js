@@ -43,6 +43,7 @@ import { withdrawAmountHandle } from "./commands/withdrawAmountHandle.js";
 import { withdrawAddressHandle } from "./commands/withdrawAddressHandle.js";
 
 import { shopQuantityHandle, shopConfirmHandle } from "./commands/shopFlow.js";
+import { shopSearchHandle } from "./commands/shopSearchHandle.js";
 
 import {
   addItemTitle,

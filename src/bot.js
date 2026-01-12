@@ -51,6 +51,8 @@ import {
   addItemStock,
 } from "./commands/adminShopAdd.js";
 
+import { editItemPrice, editItemStock } from "./commands/adminShopEdit.js";
+
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -88,6 +90,24 @@ bot.action(/buy_(\d+)/, async (ctx) => {
   });
 });
 
+bot.action(/admin_delete_item_(\d+)/, adminOnly, async (ctx) => {
+  const id = ctx.match[1];
+
+  await pool.query(`UPDATE shop_items SET active = false WHERE id = $1`, [id]);
+
+  await ctx.editMessageText(`🗑 Item #${id} removed from shop.`);
+});
+bot.action(/admin_edit_item_(\d+)/, adminOnly, async (ctx) => {
+  const id = ctx.match[1];
+
+  ctx.session = {
+    step: "edit_item_price",
+    itemId: id,
+  };
+
+  await ctx.editMessageText(`Enter new price for item #${id}`);
+});
+
 bot.action("support", supportCommand);
 
 bot.action("profile_transactions", profileTransactions);
@@ -112,7 +132,7 @@ bot.action("community", (ctx) => {
   ctx.reply("🌐 Join our community:\nhttps://t.me/miles_Trader_support");
 });
 
-bot.action(["shop", "escrow", "orders"], async (ctx) => {
+bot.action(["escrow", "orders"], async (ctx) => {
   await ctx.reply("🚧 This feature is coming soon.");
 });
 
@@ -241,6 +261,9 @@ bot.on("message", async (ctx, next) => {
   if (ctx.session.step === "shop_confirm") {
     return shopConfirmHandle(ctx);
   }
+
+  if (ctx.session.step === "edit_item_price") return editItemPrice(ctx);
+  if (ctx.session.step === "edit_item_stock") return editItemStock(ctx);
 
   return next();
 });

@@ -270,6 +270,8 @@ bot.on("message", async (ctx, next) => {
   if (ctx.session.step === "edit_item_price") return editItemPrice(ctx);
   if (ctx.session.step === "edit_item_stock") return editItemStock(ctx);
 
+  if (ctx.session.step === "shop_search") return shopSearchHandle(ctx);
+
   return next();
 });
 

@@ -7,7 +7,7 @@ export async function escrowMenu(ctx) {
 
   await ctx.editMessageText(text, {
     parse_mode: "Markdown",
-    reply_markup: Markup.inlineKeyboard([
+    ...Markup.inlineKeyboard([
       [Markup.button.callback("➕ Make a Deal", "deal_create")],
 
       [Markup.button.callback("📦 Active Deals", "deal_active")],

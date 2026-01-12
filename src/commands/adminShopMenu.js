@@ -1,5 +1,6 @@
 import { pool } from "../db.js";
 import { Markup } from "telegraf";
+import { formatBalance } from "../utils/helper.js";
 
 export async function adminShopMenu(ctx) {
   await ctx.answerCbQuery?.().catch(() => {});
@@ -23,9 +24,9 @@ export async function adminShopMenu(ctx) {
 
   const lines = res.rows.map(
     (i) =>
-      `#${i.id} ${i.active ? "🟢" : "🔴"} ${i.title} — ${i.price} ${
-        i.currency
-      } (Stock: ${i.stock})`
+      `#${i.id} ${i.active ? "🟢" : "🔴"} ${i.title} — ${formatBalance(
+        i.price
+      )} ${i.currency} (Stock: ${i.stock})`
   );
 
   await ctx.editMessageText("🛒 <b>Shop Manager</b>\n\n" + lines.join("\n"), {

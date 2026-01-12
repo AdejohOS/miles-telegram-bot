@@ -34,7 +34,10 @@ export async function shopMenu(ctx) {
     reply_markup: Markup.inlineKeyboard(
       res.rows
         .map((i) => [Markup.button.callback(`Buy ${i.title}`, `buy_${i.id}`)])
-        .concat([[Markup.button.callback("⬅ Back to Main Menu", "main_menu")]])
+        .concat([
+          [Markup.button.callback("🔍 Search", "shop_search")],
+          [Markup.button.callback("⬅ Back to Main Menu", "main_menu")],
+        ])
     ).reply_markup,
   });
 }

@@ -108,6 +108,11 @@ bot.action(/admin_edit_item_(\d+)/, adminOnly, async (ctx) => {
   await ctx.editMessageText(`Enter new price for item #${id}`);
 });
 
+bot.action("shop_search", async (ctx) => {
+  ctx.session = { step: "shop_search" };
+  await ctx.editMessageText("🔍 Enter item name or keyword:");
+});
+
 bot.action("support", supportCommand);
 
 bot.action("profile_transactions", profileTransactions);

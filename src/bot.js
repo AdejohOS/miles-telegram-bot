@@ -200,7 +200,14 @@ bot.action(/withdraw_paid_(\d+)/, adminOnly, (ctx) =>
   adminWithdrawPaid(ctx, ctx.match[1])
 );
 
-bot.command("admin_debit", adminOnly, adminDebit);
+bot.action("admin_debit", adminOnly, adminDebit);
+bot.command("admin_debit", adminOnly, async (ctx) => {
+  ctx.session = { step: "admin_debit" };
+  await ctx.editMessageText(
+    "➖ <b>Admin Debit</b>\n\nSend:\n<code>telegram_id BTC|USDT amount reason</code>",
+    { parse_mode: "HTML" }
+  );
+});
 
 bot.on("message", async (ctx, next) => {
   if (!ctx.message?.text) return next();
@@ -277,6 +284,9 @@ bot.on("message", async (ctx, next) => {
 
   if (ctx.session.step === "shop_search") return shopSearchHandle(ctx);
 
+  if (ctx.session?.step === "admin_debit") {
+    return adminDebit(ctx);
+  }
   return next();
 });
 

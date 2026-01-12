@@ -183,5 +183,22 @@ CREATE TABLE admin_debits (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE deals (
+  id SERIAL PRIMARY KEY,
+  sender_id BIGINT NOT NULL,
+  receiver_id BIGINT NOT NULL,
+  currency TEXT NOT NULL,
+  amount NUMERIC(36,18) NOT NULL,
+  description TEXT,
+  status TEXT DEFAULT 'pending', 
+  -- pending, accepted, disputed, completed, cancelled
+  created_at TIMESTAMP DEFAULT NOW(),
+  completed_at TIMESTAMP,
+
+  CONSTRAINT fk_sender FOREIGN KEY (sender_id) REFERENCES users(telegram_id),
+  CONSTRAINT fk_receiver FOREIGN KEY (receiver_id) REFERENCES users(telegram_id)
+);
+
+
 
 

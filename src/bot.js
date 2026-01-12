@@ -55,6 +55,7 @@ import {
 } from "./commands/adminShopAdd.js";
 
 import { editItemPrice, editItemStock } from "./commands/adminShopEdit.js";
+import { escrowMenu } from "./commands/escrow.js";
 
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -115,7 +116,7 @@ bot.action("shop_search", async (ctx) => {
   ctx.session = { step: "shop_search" };
   await ctx.editMessageText("🔍 Enter item name or keyword:");
 });
-
+bot.action("deals", escrowMenu);
 bot.action("support", supportCommand);
 
 bot.action("profile_transactions", profileTransactions);

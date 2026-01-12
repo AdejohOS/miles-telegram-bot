@@ -33,7 +33,7 @@ export async function startCommand(ctx) {
     ],
 
     [Markup.button.callback("🛒 Shop", "shop_menu")],
-    [Markup.button.callback("🤝 Escrow", "escrow")],
+    [Markup.button.callback("🤝 Escrow", "deals")],
     [Markup.button.callback("📜 My Orders", "orders")],
     [Markup.button.callback("📞 Support", "support")],
   ]);

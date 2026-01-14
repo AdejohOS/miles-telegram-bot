@@ -206,10 +206,6 @@ bot.action("community", (ctx) => {
   ctx.reply("🌐 Join our community:\nhttps://t.me/miles_Trader_support");
 });
 
-bot.action(["escrow", "orders"], async (ctx) => {
-  await ctx.reply("🚧 This feature is coming soon.");
-});
-
 bot.action("main_menu", startCommand);
 
 // ADMIN COMMANDS

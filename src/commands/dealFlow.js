@@ -1,3 +1,5 @@
+import { pool } from "../db.js";
+
 export async function dealReceiver(ctx) {
   const input = ctx.message.text;
 

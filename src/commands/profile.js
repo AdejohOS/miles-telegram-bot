@@ -1,5 +1,6 @@
 import { Markup } from "telegraf";
 import { pool } from "../db.js";
+import { formatBalance } from "../utils/helper.js";
 
 export async function profileCommand(ctx) {
   const telegramId = ctx.from.id;
@@ -35,9 +36,9 @@ export async function profileCommand(ctx) {
     `Telegram ID: ${telegramId}\n` +
     `Joined: ${joined}\n\n` +
     `💰 <b>Wallet (USD)</b>\n` +
-    `Available: $${available.toFixed(2)}\n` +
-    `Locked: $${locked.toFixed(2)}\n` +
-    `Total: $${balance.toFixed(2)}`;
+    `Available: $${formatBalance(available)}\n` +
+    `Locked: $${formatBalance(locked)}\n` +
+    `Total: $${formatBalance(balance)}`;
 
   const keyboard = Markup.inlineKeyboard([
     [Markup.button.callback("📜 Transactions", "profile_transactions")],

@@ -3,7 +3,7 @@ import { pool } from "../db.js";
 export async function withdrawAddressHandle(ctx) {
   if (ctx.session?.step !== "withdraw_address") return;
 
-  const { currency, amount } = ctx.session;
+  const { network, amount } = ctx.session;
   const address = ctx.message.text.trim();
   const telegramId = ctx.from.id;
 
@@ -12,37 +12,37 @@ export async function withdrawAddressHandle(ctx) {
   try {
     await client.query("BEGIN");
 
-    // 🔒 Lock the user's balance row
+    // 🔒 Lock user USD balance
     const balRes = await client.query(
       `
-      SELECT balance, locked
+      SELECT balance_usd, locked_usd
       FROM user_balances
-      WHERE telegram_id = $1 AND currency = $2
+      WHERE telegram_id = $1
       FOR UPDATE
       `,
-      [telegramId, currency]
+      [telegramId]
     );
 
     if (!balRes.rows.length) {
-      throw new Error("No balance found");
+      throw new Error("Balance record not found");
     }
 
-    const balance = Number(balRes.rows[0].balance);
-    const locked = Number(balRes.rows[0].locked);
+    const balance = Number(balRes.rows[0].balance_usd);
+    const locked = Number(balRes.rows[0].locked_usd);
     const available = balance - locked;
 
     if (amount > available) {
       throw new Error("Insufficient available balance");
     }
 
-    // 🔒 Lock funds
+    // 🔒 Lock USD
     await client.query(
       `
       UPDATE user_balances
-      SET locked = locked + $1
-      WHERE telegram_id = $2 AND currency = $3
+      SET locked_usd = locked_usd + $1
+      WHERE telegram_id = $2
       `,
-      [amount, telegramId, currency]
+      [amount, telegramId]
     );
 
     // 📝 Create withdrawal request
@@ -52,22 +52,25 @@ export async function withdrawAddressHandle(ctx) {
       (telegram_id, currency, amount, address)
       VALUES ($1, $2, $3, $4)
       `,
-      [telegramId, currency, amount, address]
+      [telegramId, network, amount, address]
     );
 
     await client.query("COMMIT");
+
+    ctx.session = null;
+
+    await ctx.reply(
+      "✅ *Withdrawal request submitted*\n\n" +
+        `Amount: *$${amount}*\n` +
+        `Network: *${network}*\n\n` +
+        "Funds are locked pending admin approval.",
+      { parse_mode: "Markdown" }
+    );
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("Withdraw failed:", err);
-    return ctx.reply("❌ Withdrawal failed: " + err.message);
+    ctx.reply("❌ Withdrawal failed: " + err.message);
   } finally {
     client.release();
   }
-
-  ctx.session = null;
-
-  await ctx.reply(
-    "✅ Withdrawal request submitted.\n\n" +
-      "Your funds are locked pending admin approval."
-  );
 }

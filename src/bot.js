@@ -55,7 +55,6 @@ import {
   addItemStock,
 } from "./commands/adminShopAdd.js";
 
-import { editItemPrice, editItemStock } from "./commands/adminShopEdit.js";
 import { escrowMenu } from "./commands/escrow.js";
 import {
   dealReceiver,
@@ -187,19 +186,22 @@ bot.action("support", supportCommand);
 bot.action("profile_transactions", profileTransactions);
 
 bot.action("request_withdrawal", requestWithdrawal);
+
 bot.action(/^withdraw_currency_(BTC|USDT)$/, async (ctx) => {
-  const currency = ctx.match[1];
+  const network = ctx.match[1];
 
   ctx.session.step = "withdraw_amount";
-  ctx.session.currency = currency;
+  ctx.session.network = network;
 
   await ctx.editMessageText(
-    `💁 <b>Withdrawal</b>\n\nCurrency: <b>${currency}</b>\nEnter amount:`,
-    { parse_mode: "HTML" }
+    `💁 *Withdrawal*\n\nNetwork: *${network}*\n\nEnter amount in *USD*:`,
+    {
+      parse_mode: "Markdown",
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Back", "request_withdrawal")],
+      ]).reply_markup,
+    }
   );
-
-  // 🔑 This is REQUIRED
-  await ctx.answerCbQuery().catch(() => {});
 });
 
 bot.action("community", (ctx) => {

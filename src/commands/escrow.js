@@ -3,7 +3,7 @@ import { Markup } from "telegraf";
 export async function escrowMenu(ctx) {
   await ctx.answerCbQuery();
 
-  const text = "🤝 *Deals*\n\nSelect a category:";
+  const text = "🤝 *Deals*\n\nSelect an action:";
 
   await ctx.editMessageText(text, {
     parse_mode: "Markdown",
@@ -14,10 +14,11 @@ export async function escrowMenu(ctx) {
 
       [
         Markup.button.callback("⏳ Awaiting", "deal_pending"),
-        Markup.button.callback("⚖ Disputes", "deal_disputes"),
+        Markup.button.callback("✅ Completed", "deal_completed"),
+        ,
       ],
 
-      [Markup.button.callback("✅ Completed", "deal_completed")],
+      [Markup.button.callback("⚖ Disputes", "deal_disputes")],
 
       [Markup.button.callback("⬅ Back to Main Menu", "main_menu")],
     ]),

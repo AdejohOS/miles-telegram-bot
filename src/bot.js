@@ -56,6 +56,12 @@ import {
 
 import { editItemPrice, editItemStock } from "./commands/adminShopEdit.js";
 import { escrowMenu } from "./commands/escrow.js";
+import {
+  dealReceiver,
+  dealAmount,
+  dealCurrency,
+  dealDesc,
+} from "./commands/dealFlow.js";
 
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -117,6 +123,64 @@ bot.action("shop_search", async (ctx) => {
   await ctx.editMessageText("🔍 Enter item name or keyword:");
 });
 bot.action("deals", escrowMenu);
+
+bot.action("deal_create", async (ctx) => {
+  ctx.session = { step: "deal_receiver" };
+  await ctx.editMessageText("Send receiver @username or Telegram ID:");
+});
+
+bot.action(/deal_complete_(\d+)/, async (ctx) => {
+  const id = ctx.match[1];
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const deal = await client.query(
+      `SELECT * FROM deals WHERE id=$1 AND status='accepted' FOR UPDATE`,
+      [id]
+    );
+
+    const { sender_id, receiver_id, currency, amount } = deal.rows[0];
+
+    // Unlock sender & pay receiver
+    await client.query(
+      `UPDATE user_balances
+       SET locked = locked - $1, balance = balance - $1
+       WHERE telegram_id=$2 AND currency=$3`,
+      [amount, sender_id, currency]
+    );
+
+    await client.query(
+      `INSERT INTO user_balances (telegram_id, currency, balance)
+       VALUES ($1,$2,$3)
+       ON CONFLICT (telegram_id,currency)
+       DO UPDATE SET balance = user_balances.balance + $3`,
+      [receiver_id, currency, amount]
+    );
+
+    await client.query(
+      `UPDATE deals SET status='completed', completed_at=NOW() WHERE id=$1`,
+      [id]
+    );
+
+    await client.query("COMMIT");
+
+    ctx.editMessageText("💰 Deal completed. Receiver paid.");
+  } catch (e) {
+    await client.query("ROLLBACK");
+    ctx.reply("❌ Failed");
+  } finally {
+    client.release();
+  }
+});
+
+bot.action(/deal_accept_(\d+)/, async (ctx) => {
+  const id = ctx.match[1];
+  await pool.query(`UPDATE deals SET status='accepted' WHERE id=$1`, [id]);
+  ctx.editMessageText("✅ Deal accepted.");
+});
+
 bot.action("support", supportCommand);
 
 bot.action("profile_transactions", profileTransactions);
@@ -288,6 +352,23 @@ bot.on("message", async (ctx, next) => {
   if (ctx.session?.step === "admin_debit") {
     return adminDebit(ctx);
   }
+  // 🤝 DEAL FLOWS
+  if (ctx.session.step === "deal_receiver") {
+    return dealReceiver(ctx);
+  }
+
+  if (ctx.session.step === "deal_amount") {
+    return dealAmount(ctx);
+  }
+
+  if (ctx.session.step === "deal_currency") {
+    return dealCurrency(ctx);
+  }
+
+  if (ctx.session.step === "deal_desc") {
+    return dealDesc(ctx);
+  }
+
   return next();
 });
 

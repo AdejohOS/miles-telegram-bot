@@ -8,7 +8,7 @@ export async function adminWithdrawReject(ctx, id) {
 
     const res = await client.query(
       `
-      SELECT telegram_id, currency, amount
+      SELECT telegram_id, amount
       FROM withdrawal_requests
       WHERE id = $1 AND status = 'pending'
       FOR UPDATE
@@ -16,21 +16,20 @@ export async function adminWithdrawReject(ctx, id) {
       [id]
     );
 
-    if (!res.rows.length) throw new Error("Invalid");
+    if (!res.rows.length) throw new Error("Withdrawal not found");
 
-    const { telegram_id, currency, amount } = res.rows[0];
+    const { telegram_id, amount } = res.rows[0];
 
-    // Unlock funds
+    // 🔓 Unlock USD
     await client.query(
       `
       UPDATE user_balances
-      SET locked = locked - $1
-      WHERE telegram_id = $2 AND currency = $3
+      SET locked_usd = locked_usd - $1
+      WHERE telegram_id = $2
       `,
-      [amount, telegram_id, currency]
+      [amount, telegram_id]
     );
 
-    // Mark rejected
     await client.query(
       `
       UPDATE withdrawal_requests
@@ -45,7 +44,7 @@ export async function adminWithdrawReject(ctx, id) {
     await ctx.editMessageText(`❌ Withdrawal #${id} rejected.`);
   } catch (err) {
     await client.query("ROLLBACK");
-    await ctx.editMessageText("❌ Reject failed.");
+    ctx.reply("❌ Reject failed: " + err.message);
   } finally {
     client.release();
   }

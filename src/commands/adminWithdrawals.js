@@ -3,7 +3,13 @@ import { Markup } from "telegraf";
 
 export async function adminWithdrawals(ctx) {
   const res = await pool.query(`
-    SELECT id, telegram_id, currency, amount, address, created_at
+    SELECT
+      id,
+      telegram_id,
+      amount_usd,
+      payout_currency,
+      address,
+      created_at
     FROM withdrawal_requests
     WHERE status = 'pending'
     ORDER BY created_at ASC
@@ -23,7 +29,11 @@ export async function adminWithdrawals(ctx) {
     res.rows
       .map(
         (w) =>
-          `#${w.id}\nUser: ${w.telegram_id}\nAmount: $${w.amount}\nNetwork: ${w.currency}\n`
+          `#${w.id}\n` +
+          `User: ${w.telegram_id}\n` +
+          `Amount: $${w.amount_usd}\n` +
+          `Payout: ${w.payout_currency}\n` +
+          `Address: ${w.address}\n`
       )
       .join("\n");
 

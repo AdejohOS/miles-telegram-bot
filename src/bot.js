@@ -184,6 +184,7 @@ bot.action(/deal_accept_(\d+)/, async (ctx) => {
 bot.action("support", supportCommand);
 
 bot.action("profile_transactions", profileTransactions);
+bot.action(/tx_page_(\d+)/, profileTransactions);
 
 bot.action("request_withdrawal", requestWithdrawal);
 

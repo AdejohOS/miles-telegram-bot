@@ -1,5 +1,6 @@
 import { pool } from "../db.js";
 import { Markup } from "telegraf";
+import { formatBalance } from "../utils/helper.js";
 
 export async function adminFindUserHandle(ctx) {
   if (ctx.session?.step !== "find_user") return;
@@ -66,7 +67,7 @@ export async function adminFindUserHandle(ctx) {
   );
 
   const balance = bal.rows[0]
-    ? `$${bal.rows[0].balance_usd.toFixed(2)}`
+    ? `$${formatBalance(bal.rows[0].balance_usd)}`
     : "$0.00";
 
   ctx.session = {

@@ -230,7 +230,7 @@ bot.action("admin_find_user", adminOnly, adminFindUserStart);
 
 bot.action("admin_credit_found_user", adminOnly, adminCreditFromFoundUser);
 
-bot.action(/^credit_currency_(BTC|USDT)$/, adminOnly, async (ctx) => {
+bot.action(/^credit_currency_(BTC|USDT|MANUAL)$/, adminOnly, async (ctx) => {
   const currency = ctx.match[1];
 
   if (!ctx.session?.creditUserId) {

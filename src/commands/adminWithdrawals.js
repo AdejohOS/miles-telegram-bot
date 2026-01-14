@@ -1,6 +1,6 @@
 import { pool } from "../db.js";
 import { Markup } from "telegraf";
-import { safeEdit } from "../utils/helper.js";
+import { safeEdit } from "../utils/safeEdit.js";
 
 export async function adminWithdrawals(ctx) {
   await ctx.answerCbQuery?.().catch(() => {});

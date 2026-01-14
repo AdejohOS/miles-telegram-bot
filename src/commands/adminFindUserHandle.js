@@ -1,6 +1,5 @@
 import { pool } from "../db.js";
 import { Markup } from "telegraf";
-import { formatBalance } from "../utils/helper.js";
 
 export async function adminFindUserHandle(ctx) {
   if (ctx.session?.step !== "find_user") return;
@@ -12,40 +11,34 @@ export async function adminFindUserHandle(ctx) {
   let telegramId;
   let foundBy;
 
-  // 1️⃣ Telegram ID
+  // Telegram ID
   if (/^\d+$/.test(input)) {
     foundBy = "Telegram ID";
-    const res = await pool.query(
+    const r = await pool.query(
       `SELECT telegram_id FROM users WHERE telegram_id = $1`,
       [input]
     );
-    telegramId = res.rows[0]?.telegram_id;
+    telegramId = r.rows[0]?.telegram_id;
   }
 
-  // 2️⃣ Username
+  // Username
   else if (input.startsWith("@")) {
     foundBy = "Username";
-    const res = await pool.query(
+    const r = await pool.query(
       `SELECT telegram_id FROM users WHERE username = $1`,
       [input.slice(1)]
     );
-    telegramId = res.rows[0]?.telegram_id;
+    telegramId = r.rows[0]?.telegram_id;
   }
 
-  // 3️⃣ Wallet address
-  else if (input.startsWith("bc1") || input.startsWith("T")) {
+  // Wallet address
+  else {
     foundBy = "Wallet Address";
-    const res = await pool.query(
-      `
-      SELECT telegram_id
-      FROM user_wallets
-      WHERE address = $1
-      `,
+    const r = await pool.query(
+      `SELECT telegram_id FROM user_wallets WHERE address = $1`,
       [input]
     );
-    telegramId = res.rows[0]?.telegram_id;
-  } else {
-    return ctx.reply("❌ Invalid search input.");
+    telegramId = r.rows[0]?.telegram_id;
   }
 
   if (!telegramId) {
@@ -53,9 +46,8 @@ export async function adminFindUserHandle(ctx) {
       chatId,
       msgId,
       null,
-      "❌ No user found.",
+      "❌ User not found.",
       {
-        parse_mode: "HTML",
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback("⬅ Back", "admin_menu")],
         ]).reply_markup,
@@ -63,31 +55,20 @@ export async function adminFindUserHandle(ctx) {
     );
   }
 
-  // 🔍 Fetch user
-  const userRes = await pool.query(
+  const user = await pool.query(
     `SELECT telegram_id, username FROM users WHERE telegram_id = $1`,
     [telegramId]
   );
 
-  const user = userRes.rows[0];
-
-  // 🔍 Fetch balances
-  const balRes = await pool.query(
-    `SELECT currency, balance
-     FROM user_balances
-     WHERE telegram_id = $1`,
+  const bal = await pool.query(
+    `SELECT balance_usd, locked_usd FROM user_balances WHERE telegram_id = $1`,
     [telegramId]
   );
 
-  let balanceText = "No balances.";
+  const balance = bal.rows[0]
+    ? `$${bal.rows[0].balance_usd.toFixed(2)}`
+    : "$0.00";
 
-  if (balRes.rows.length) {
-    balanceText = balRes.rows
-      .map((b) => `• ${b.currency}: ${formatBalance(b.balance)}`)
-      .join("\n");
-  }
-
-  // ✅ KEEP SESSION FOR CREDIT
   ctx.session = {
     step: "found_user",
     adminMessageId: msgId,
@@ -98,18 +79,15 @@ export async function adminFindUserHandle(ctx) {
     chatId,
     msgId,
     null,
-    `
-<b>✅ User Found</b>
-
-<b>Found by:</b> ${foundBy}
-<b>Telegram ID:</b> ${user.telegram_id}
-<b>Username:</b> ${user.username ? "@" + user.username : "N/A"}
-
-<b>💰 Balances</b>
-${balanceText}
-    `,
+    `✅ *User Found*\n\n` +
+      `Found by: ${foundBy}\n` +
+      `Telegram ID: \`${user.rows[0].telegram_id}\`\n` +
+      `Username: ${
+        user.rows[0].username ? "@" + user.rows[0].username : "N/A"
+      }\n\n` +
+      `💰 *Balance:* ${balance}`,
     {
-      parse_mode: "HTML",
+      parse_mode: "Markdown",
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback("➕ Credit User", "admin_credit_found_user")],
         [Markup.button.callback("⬅ Back", "admin_menu")],

@@ -13,12 +13,11 @@ export async function adminFindUserStart(ctx) {
       "Send one of the following:\n\n" +
       "• Telegram ID\n" +
       "• @username\n" +
-      "• BTC address (bc1...)\n" +
-      "• USDT-TRC20 address (T...)\n",
+      "• Wallet address (BTC / USDT)",
     {
       parse_mode: "Markdown",
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Cancel", "admin_menu")],
+        [Markup.button.callback("⬅ Back", "admin_menu")],
       ]).reply_markup,
     }
   );

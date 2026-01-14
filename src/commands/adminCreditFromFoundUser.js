@@ -5,18 +5,13 @@ export async function adminCreditFromFoundUser(ctx) {
     return ctx.answerCbQuery("No user selected.");
   }
 
-  // Move to currency selection step
-  ctx.session.step = "choose_currency";
+  ctx.session.step = "awaiting_amount";
   ctx.session.adminMessageId = ctx.callbackQuery.message.message_id;
 
-  await ctx.editMessageText("➕ *Credit User*\n\nSelect currency to credit:", {
+  await ctx.editMessageText("➕ *Credit User*\n\nEnter amount in *USD*:", {
     parse_mode: "Markdown",
     reply_markup: Markup.inlineKeyboard([
-      [
-        Markup.button.callback("₿ BTC", "credit_currency_BTC"),
-        Markup.button.callback("💵 USDT", "credit_currency_USDT"),
-      ],
-      [Markup.button.callback("⬅ Cancel", "admin_menu")],
+      [Markup.button.callback("⬅ Back", "admin_menu")],
     ]).reply_markup,
   });
 }

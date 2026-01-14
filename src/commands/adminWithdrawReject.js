@@ -8,7 +8,7 @@ export async function adminWithdrawReject(ctx, id) {
 
     const res = await client.query(
       `
-      SELECT telegram_id, amount
+      SELECT telegram_id, amount_usd
       FROM withdrawal_requests
       WHERE id = $1 AND status = 'pending'
       FOR UPDATE
@@ -18,7 +18,7 @@ export async function adminWithdrawReject(ctx, id) {
 
     if (!res.rows.length) throw new Error("Withdrawal not found");
 
-    const { telegram_id, amount } = res.rows[0];
+    const { telegram_id, amount_usd } = res.rows[0];
 
     // 🔓 Unlock USD
     await client.query(
@@ -27,7 +27,7 @@ export async function adminWithdrawReject(ctx, id) {
       SET locked_usd = locked_usd - $1
       WHERE telegram_id = $2
       `,
-      [amount, telegram_id]
+      [amount_usd, telegram_id]
     );
 
     await client.query(

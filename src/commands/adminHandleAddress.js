@@ -9,7 +9,6 @@ export async function adminHandleAddress(ctx) {
   const msgId = ctx.session.adminMessageId;
 
   let currency;
-
   if (address.startsWith("bc1")) currency = "BTC";
   else if (address.startsWith("T")) currency = "USDT";
   else return ctx.reply("❌ Invalid address format.");
@@ -34,7 +33,7 @@ export async function adminHandleAddress(ctx) {
     step: "awaiting_amount",
     adminMessageId: msgId,
     creditUserId: user.telegram_id,
-    creditCurrency: currency,
+    payoutCurrency: currency,
   };
 
   await ctx.telegram.editMessageText(
@@ -43,13 +42,13 @@ export async function adminHandleAddress(ctx) {
     null,
     `✅ *User Found*\n\n` +
       `Telegram ID: \`${user.telegram_id}\`\n` +
-      `Currency: ${currency}\n` +
-      `Username: ${user.username ? "@" + user.username : "N/A"}\n\n` +
-      `Now enter the *amount* to credit:`,
+      `Username: ${user.username ? "@" + user.username : "N/A"}\n` +
+      `Deposit Network: ${currency}\n\n` +
+      `Enter *USD amount* to credit:`,
     {
       parse_mode: "Markdown",
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Cancel", "admin_menu")],
+        [Markup.button.callback("⬅ Back", "admin_credit_address")],
       ]).reply_markup,
     }
   );

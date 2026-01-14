@@ -14,7 +14,7 @@ export async function adminCreditByAddressStart(ctx) {
     {
       parse_mode: "Markdown",
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Cancel", "admin_menu")],
+        [Markup.button.callback("⬅ Back", "admin_menu")],
       ]).reply_markup,
     }
   );

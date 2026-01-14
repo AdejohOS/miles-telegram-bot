@@ -6,67 +6,48 @@ export async function adminCreditApprove(ctx) {
     return ctx.answerCbQuery("No pending credit.");
   }
 
-  const { creditUserId, creditCurrency, creditAmount } = ctx.session;
-
+  const { creditUserId, creditAmountUsd } = ctx.session;
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
 
-    // ✅ Credit balance
     await client.query(
       `
-      INSERT INTO user_balances (telegram_id, currency, balance)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (telegram_id, currency)
-      DO UPDATE
-      SET balance = user_balances.balance + EXCLUDED.balance
+      INSERT INTO user_balances (telegram_id, balance_usd)
+      VALUES ($1, 0)
+      ON CONFLICT (telegram_id) DO NOTHING
       `,
-      [creditUserId, creditCurrency, creditAmount]
+      [creditUserId]
     );
 
-    // ✅ Admin credit log
     await client.query(
       `
-      INSERT INTO admin_credits (admin_id, telegram_id, currency, amount)
-      VALUES ($1, $2, $3, $4)
+      UPDATE user_balances
+      SET balance_usd = balance_usd + $1,
+          updated_at = NOW()
+      WHERE telegram_id = $2
       `,
-      [ctx.from.id, creditUserId, creditCurrency, creditAmount]
-    );
-
-    // ✅ Transaction log
-    await client.query(
-      `
-      INSERT INTO transactions
-      (telegram_id, currency, amount, type, source, reference)
-      VALUES ($1, $2, $3, 'credit', 'admin', $4)
-      `,
-      [creditUserId, creditCurrency, creditAmount, `admin:${ctx.from.id}`]
+      [creditAmountUsd, creditUserId]
     );
 
     await client.query("COMMIT");
+
+    ctx.session = null;
+
+    await ctx.editMessageText(
+      `✅ *Credit Successful*\n\nUser credited *$${creditAmountUsd}*`,
+      {
+        parse_mode: "Markdown",
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback("⬅ Back to Admin Menu", "admin_menu")],
+        ]).reply_markup,
+      }
+    );
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error("Admin credit failed:", err);
-
-    return ctx.editMessageText("❌ *Credit failed.* Please try again.", {
-      parse_mode: "Markdown",
-    });
+    ctx.reply("❌ Credit failed: " + err.message);
   } finally {
     client.release();
   }
-
-  ctx.session = null;
-
-  await ctx.editMessageText("✅ *Credit approved and applied.*", {
-    parse_mode: "Markdown",
-    reply_markup: Markup.inlineKeyboard([
-      [Markup.button.callback("⬅ Back to Admin Menu", "admin_menu")],
-    ]).reply_markup,
-  });
-
-  await ctx.telegram.sendMessage(
-    creditUserId,
-    `🎉 Your ${creditCurrency} balance has been credited.\nAmount: ${creditAmount}`
-  );
 }

@@ -5,17 +5,17 @@ export async function adminHandleAmount(ctx) {
 
   const amount = Number(ctx.message.text.trim());
   if (isNaN(amount) || amount <= 0) {
-    return ctx.reply("❌ Invalid amount.");
+    return ctx.reply("❌ Invalid USD amount.");
   }
 
-  const { adminMessageId, creditUserId, creditCurrency } = ctx.session;
+  const { adminMessageId, creditUserId, payoutCurrency } = ctx.session;
 
   ctx.session = {
     step: "confirm_credit",
     adminMessageId,
     creditUserId,
-    creditCurrency,
-    creditAmount: amount,
+    payoutCurrency,
+    creditAmountUsd: amount,
   };
 
   await ctx.telegram.editMessageText(
@@ -24,15 +24,15 @@ export async function adminHandleAmount(ctx) {
     null,
     `⚠️ *Confirm Credit*\n\n` +
       `User ID: \`${creditUserId}\`\n` +
-      `Currency: ${creditCurrency}\n` +
-      `Amount: *${amount}*\n\n` +
+      `Deposit Network: ${payoutCurrency}\n` +
+      `Credit Amount: *$${amount}*\n\n` +
       `Proceed?`,
     {
       parse_mode: "Markdown",
       reply_markup: Markup.inlineKeyboard([
         [
           Markup.button.callback("✅ Approve", "admin_credit_approve"),
-          Markup.button.callback("❌ Reject", "admin_credit_reject"),
+          Markup.button.callback("⬅ Back", "admin_credit_address"),
         ],
       ]).reply_markup,
     }

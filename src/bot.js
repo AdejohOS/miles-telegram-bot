@@ -273,33 +273,24 @@ bot.action("admin_debit", adminOnly, async (ctx) => {
 
 bot.on("message", async (ctx, next) => {
   if (!ctx.message?.text) return next();
-
   if (!ctx.session?.step) return next();
 
-  // 🔐 ADMIN flows only
-  if (
-    ["awaiting_address", "awaiting_amount", "find_user"].includes(
-      ctx.session.step
-    )
-  ) {
-    if (!ADMIN_IDS.includes(ctx.from.id)) {
-      return ctx.reply("⛔ Access denied.");
-    }
+  /* =========================
+     USER FLOWS (FIRST)
+  ========================= */
 
-    if (ctx.session.step === "awaiting_address") {
-      return adminHandleAddress(ctx);
-    }
-
-    if (ctx.session.step === "awaiting_amount") {
-      return adminHandleAmount(ctx);
-    }
-
-    if (ctx.session.step === "find_user") {
-      return adminFindUserHandle(ctx);
-    }
+  if (ctx.session.step === "shop_quantity") {
+    return shopQuantityHandle(ctx);
   }
 
-  // 🧍‍♂️ USER flows
+  if (ctx.session.step === "shop_confirm") {
+    return shopConfirmHandle(ctx);
+  }
+
+  if (ctx.session.step === "shop_search") {
+    return shopSearchHandle(ctx);
+  }
+
   if (ctx.session.step === "withdraw_amount") {
     return withdrawAmountHandle(ctx);
   }
@@ -307,6 +298,27 @@ bot.on("message", async (ctx, next) => {
   if (ctx.session.step === "withdraw_address") {
     return withdrawAddressHandle(ctx);
   }
+
+  /* 🤝 DEAL FLOWS */
+  if (ctx.session.step === "deal_receiver") {
+    return dealReceiver(ctx);
+  }
+
+  if (ctx.session.step === "deal_amount") {
+    return dealAmount(ctx);
+  }
+
+  if (ctx.session.step === "deal_currency") {
+    return dealCurrency(ctx);
+  }
+
+  if (ctx.session.step === "deal_desc") {
+    return dealDesc(ctx);
+  }
+
+  /* =========================
+     ADMIN FLOWS (LAST)
+  ========================= */
 
   const adminSteps = [
     "add_item_title",
@@ -316,6 +328,7 @@ bot.on("message", async (ctx, next) => {
     "awaiting_address",
     "awaiting_amount",
     "find_user",
+    "admin_debit",
   ];
 
   if (adminSteps.includes(ctx.session.step)) {
@@ -331,39 +344,8 @@ bot.on("message", async (ctx, next) => {
     if (ctx.session.step === "awaiting_address") return adminHandleAddress(ctx);
     if (ctx.session.step === "awaiting_amount") return adminHandleAmount(ctx);
     if (ctx.session.step === "find_user") return adminFindUserHandle(ctx);
-  }
 
-  if (ctx.session.step === "shop_quantity") {
-    return shopQuantityHandle(ctx);
-  }
-
-  if (ctx.session.step === "shop_confirm") {
-    return shopConfirmHandle(ctx);
-  }
-
-  if (ctx.session.step === "edit_item_price") return editItemPrice(ctx);
-  if (ctx.session.step === "edit_item_stock") return editItemStock(ctx);
-
-  if (ctx.session.step === "shop_search") return shopSearchHandle(ctx);
-
-  if (ctx.session?.step === "admin_debit") {
-    return adminDebit(ctx);
-  }
-  // 🤝 DEAL FLOWS
-  if (ctx.session.step === "deal_receiver") {
-    return dealReceiver(ctx);
-  }
-
-  if (ctx.session.step === "deal_amount") {
-    return dealAmount(ctx);
-  }
-
-  if (ctx.session.step === "deal_currency") {
-    return dealCurrency(ctx);
-  }
-
-  if (ctx.session.step === "deal_desc") {
-    return dealDesc(ctx);
+    if (ctx.session.step === "admin_debit") return adminDebit(ctx);
   }
 
   return next();

@@ -38,10 +38,10 @@ export async function adminCreditApprove(ctx) {
     // Optional: log transaction (recommended)
     await client.query(
       `
-      INSERT INTO transactions
-      (telegram_id, amount, type, source, reference)
-      VALUES ($1, $2, 'credit', 'deposit', $3)
-      `,
+  INSERT INTO transactions
+  (telegram_id, amount_usd, type, source, reference)
+  VALUES ($1, $2, 'credit', 'deposit', $3)
+  `,
       [creditUserId, creditAmountUsd, `admin:${adminId}`]
     );
 

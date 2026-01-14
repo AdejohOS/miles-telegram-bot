@@ -1,3 +1,4 @@
+import { pool } from "../db.js";
 export async function shopQuantityHandle(ctx) {
   if (ctx.session?.step !== "shop_quantity") return;
 

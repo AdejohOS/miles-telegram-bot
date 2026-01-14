@@ -32,10 +32,9 @@ export async function adminFindUserHandle(ctx) {
     telegramId = res.rows[0]?.telegram_id;
   }
 
-  // 3️⃣ BTC / USDT address (NEW SCHEMA)
+  // 3️⃣ Wallet address
   else if (input.startsWith("bc1") || input.startsWith("T")) {
     foundBy = "Wallet Address";
-
     const res = await pool.query(
       `
       SELECT telegram_id
@@ -44,7 +43,6 @@ export async function adminFindUserHandle(ctx) {
       `,
       [input]
     );
-
     telegramId = res.rows[0]?.telegram_id;
   } else {
     return ctx.reply("❌ Invalid search input.");
@@ -55,9 +53,9 @@ export async function adminFindUserHandle(ctx) {
       chatId,
       msgId,
       null,
-      "❌ *No user found.*",
+      "❌ No user found.",
       {
-        parse_mode: "Markdown",
+        parse_mode: "HTML",
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback("⬅ Back", "admin_menu")],
         ]).reply_markup,
@@ -100,13 +98,18 @@ export async function adminFindUserHandle(ctx) {
     chatId,
     msgId,
     null,
-    `✅ *User Found*\n\n` +
-      `Found by: ${foundBy}\n` +
-      `Telegram ID: \`${user.telegram_id}\`\n` +
-      `Username: ${user.username ? "@" + user.username : "N/A"}\n\n` +
-      `💰 *Balances*\n${balanceText}`,
+    `
+<b>✅ User Found</b>
+
+<b>Found by:</b> ${foundBy}
+<b>Telegram ID:</b> ${user.telegram_id}
+<b>Username:</b> ${user.username ? "@" + user.username : "N/A"}
+
+<b>💰 Balances</b>
+${balanceText}
+    `,
     {
-      parse_mode: "Markdown",
+      parse_mode: "HTML",
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback("➕ Credit User", "admin_credit_found_user")],
         [Markup.button.callback("⬅ Back", "admin_menu")],

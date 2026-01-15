@@ -143,68 +143,6 @@ bot.action("deal_create", async (ctx) => {
   );
 });
 
-bot.action(/deal_complete_(\d+)/, async (ctx) => {
-  const id = ctx.match[1];
-  const client = await pool.connect();
-
-  try {
-    await client.query("BEGIN");
-
-    const res = await client.query(
-      `
-      SELECT sender_id, receiver_id, amount_usd
-      FROM deals
-      WHERE id = $1 AND status = 'accepted'
-      FOR UPDATE
-      `,
-      [id]
-    );
-
-    if (!res.rows.length) throw new Error("Deal not valid");
-
-    const { sender_id, receiver_id, amount_usd } = res.rows[0];
-
-    // Deduct sender (locked → spent)
-    await client.query(
-      `
-      UPDATE user_balances
-      SET locked_usd = locked_usd - $1,
-          balance_usd = balance_usd - $1
-      WHERE telegram_id = $2
-      `,
-      [amount_usd, sender_id]
-    );
-
-    // Pay receiver
-    await client.query(
-      `
-      UPDATE user_balances
-      SET balance_usd = balance_usd + $1
-      WHERE telegram_id = $2
-      `,
-      [amount_usd, receiver_id]
-    );
-
-    await client.query(
-      `
-      UPDATE deals
-      SET status = 'completed', completed_at = NOW()
-      WHERE id = $1
-      `,
-      [id]
-    );
-
-    await client.query("COMMIT");
-
-    await ctx.editMessageText("💰 Deal completed. Receiver paid.");
-  } catch (err) {
-    await client.query("ROLLBACK");
-    await ctx.reply("❌ Deal completion failed.");
-  } finally {
-    client.release();
-  }
-});
-
 bot.action(/deal_accept_(\d+)/, async (ctx) => {
   const id = ctx.match[1];
 
@@ -317,60 +255,47 @@ bot.action("deal_active", async (ctx) => {
   });
 });
 
-bot.action(/deal_complete_(\d+)/, async (ctx) => {
-  const id = ctx.match[1];
-  const client = await pool.connect();
+bot.action("deal_completed", async (ctx) => {
+  const telegramId = ctx.from.id;
 
-  try {
-    await client.query("BEGIN");
+  const res = await pool.query(
+    `SELECT id, sender_id, receiver_id, amount_usd, description, completed_at
+     FROM deals
+     WHERE status='completed'
+       AND (sender_id=$1 OR receiver_id=$1)
+     ORDER BY completed_at DESC
+     LIMIT 20`,
+    [telegramId]
+  );
 
-    const res = await client.query(
-      `SELECT sender_id, receiver_id, amount_usd
-       FROM deals
-       WHERE id=$1 AND status='accepted'
-       FOR UPDATE`,
-      [id]
+  if (!res.rows.length) {
+    return ctx.editMessageText(
+      "✅ <b>Completed Deals</b>\n\nNo completed deals.",
+      {
+        parse_mode: "HTML",
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback("⬅ Back", "deals")],
+        ]).reply_markup,
+      }
     );
-
-    if (!res.rows.length) throw new Error("Deal not valid");
-
-    const { sender_id, receiver_id, amount_usd } = res.rows[0];
-
-    await client.query(
-      `UPDATE user_balances
-       SET locked_usd = locked_usd - $1,
-           balance_usd = balance_usd - $1
-       WHERE telegram_id = $2`,
-      [amount_usd, sender_id]
-    );
-
-    await client.query(
-      `UPDATE user_balances
-       SET balance_usd = balance_usd + $1
-       WHERE telegram_id = $2`,
-      [amount_usd, receiver_id]
-    );
-
-    await client.query(
-      `UPDATE deals
-       SET status='completed', completed_at=NOW()
-       WHERE id=$1`,
-      [id]
-    );
-
-    await client.query("COMMIT");
-
-    await ctx.editMessageText("💰 Deal completed. Receiver paid.", {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Back to Deals", "deals")],
-      ]).reply_markup,
-    });
-  } catch (e) {
-    await client.query("ROLLBACK");
-    ctx.reply("❌ Deal completion failed.");
-  } finally {
-    client.release();
   }
+
+  const text =
+    "✅ <b>Completed Deals</b>\n\n" +
+    res.rows
+      .map((d) => {
+        const role = d.sender_id === telegramId ? "You paid" : "You received";
+        const date = new Date(d.completed_at).toLocaleDateString();
+        return `<b>#${d.id}</b>\n${role}\n💵 $${d.amount_usd}\n📅 ${date}\n📝 ${d.description}`;
+      })
+      .join("\n\n");
+
+  await ctx.editMessageText(text, {
+    parse_mode: "HTML",
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback("⬅ Back", "deals")],
+    ]).reply_markup,
+  });
 });
 
 bot.action("support", supportCommand);

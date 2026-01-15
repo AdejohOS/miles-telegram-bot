@@ -1,6 +1,3 @@
-import { pool } from "../db.js";
-import { Markup } from "telegraf";
-
 export async function adminCreditApprove(ctx) {
   if (ctx.session?.step !== "confirm_credit") {
     return ctx.answerCbQuery("No pending credit.");
@@ -14,7 +11,7 @@ export async function adminCreditApprove(ctx) {
   try {
     await client.query("BEGIN");
 
-    // Ensure balance row exists
+    // 1️⃣ Ensure balance row exists
     await client.query(
       `
       INSERT INTO user_balances (telegram_id, balance_usd)
@@ -24,7 +21,7 @@ export async function adminCreditApprove(ctx) {
       [creditUserId]
     );
 
-    // Credit USD balance
+    // 2️⃣ Update balance (REAL money movement)
     await client.query(
       `
       UPDATE user_balances
@@ -35,40 +32,40 @@ export async function adminCreditApprove(ctx) {
       [creditAmountUsd, creditUserId]
     );
 
-    // Optional: log transaction (recommended)
+    // ✅ 3️⃣ LOG TRANSACTION (THIS IS THE CORRECT SPOT)
     await client.query(
       `
-  INSERT INTO transactions
-  (telegram_id, amount_usd, type, source, reference)
-  VALUES ($1, $2, 'credit', 'deposit', $3)
-  `,
-      [creditUserId, creditAmountUsd, `admin:${adminId}`]
+      INSERT INTO transactions
+        (telegram_id, amount_usd, type, source, reference)
+      VALUES ($1, $2, 'credit', 'deposit', $3)
+      `,
+      [creditUserId, creditAmountUsd, `admin:${adminId} (${payoutCurrency})`]
     );
 
+    // 4️⃣ Commit everything together
     await client.query("COMMIT");
 
-    // 🧼 clear session
     ctx.session = null;
 
-    // ✅ Notify ADMIN
+    // Admin confirmation
     await ctx.editMessageText(
-      `✅ *Credit Successful*\n\nUser credited *$${creditAmountUsd}*`,
+      `✅ <b>Credit Successful</b>\n\nUser credited <b>$${creditAmountUsd}</b>`,
       {
-        parse_mode: "Markdown",
+        parse_mode: "HTML",
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback("⬅ Back to Admin Menu", "admin_menu")],
         ]).reply_markup,
       }
     );
 
-    // 🔔 Notify USER (THIS WAS MISSING)
+    // User notification
     await ctx.telegram.sendMessage(
       creditUserId,
-      `💰 *Account Credited*\n\n` +
-        `Amount: *$${creditAmountUsd}*\n` +
-        `Source: ${payoutCurrency} deposit\n\n` +
+      `💰 <b>Account Credited</b>\n\n` +
+        `Amount: <b>$${creditAmountUsd}</b>\n` +
+        `Source: <b>${payoutCurrency}</b>\n\n` +
         `You can now use your balance.`,
-      { parse_mode: "Markdown" }
+      { parse_mode: "HTML" }
     );
   } catch (err) {
     await client.query("ROLLBACK");

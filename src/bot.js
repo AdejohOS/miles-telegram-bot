@@ -183,36 +183,82 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
     await client.query("BEGIN");
 
     const res = await client.query(
-      `SELECT sender_id, receiver_id, amount_usd
-       FROM deals
-       WHERE id=$1 AND status='accepted'
-       FOR UPDATE`,
+      `
+      SELECT sender_id, receiver_id, amount_usd
+      FROM deals
+      WHERE id = $1 AND status = 'accepted'
+      FOR UPDATE
+      `,
       [id]
     );
 
-    if (!res.rows.length) throw new Error("Deal not valid");
+    if (!res.rows.length) {
+      throw new Error("Deal not valid or already completed");
+    }
 
     const { sender_id, receiver_id, amount_usd } = res.rows[0];
 
+    /* ===============================
+       MOVE MONEY
+    =============================== */
+
+    // 🔒 Unlock + deduct sender
     await client.query(
-      `UPDATE user_balances
-       SET locked_usd = locked_usd - $1,
-           balance_usd = balance_usd - $1
-       WHERE telegram_id = $2`,
+      `
+      UPDATE user_balances
+      SET
+        locked_usd  = locked_usd - $1,
+        balance_usd = balance_usd - $1
+      WHERE telegram_id = $2
+      `,
       [amount_usd, sender_id]
     );
 
+    // 💰 Pay receiver
     await client.query(
-      `UPDATE user_balances
-       SET balance_usd = balance_usd + $1
-       WHERE telegram_id = $2`,
+      `
+      UPDATE user_balances
+      SET balance_usd = balance_usd + $1
+      WHERE telegram_id = $2
+      `,
       [amount_usd, receiver_id]
     );
 
+    /* ===============================
+       LOG TRANSACTIONS (🔥 IMPORTANT)
+    =============================== */
+
+    // Sender → DEBIT
     await client.query(
-      `UPDATE deals
-       SET status='completed', completed_at=NOW()
-       WHERE id=$1`,
+      `
+      INSERT INTO transactions
+        (telegram_id, amount_usd, type, source, reference)
+      VALUES ($1, $2, 'debit', 'deal', $3)
+      `,
+      [sender_id, amount_usd, `deal:${id}`]
+    );
+
+    // Receiver → CREDIT
+    await client.query(
+      `
+      INSERT INTO transactions
+        (telegram_id, amount_usd, type, source, reference)
+      VALUES ($1, $2, 'credit', 'deal', $3)
+      `,
+      [receiver_id, amount_usd, `deal:${id}`]
+    );
+
+    /* ===============================
+       FINALIZE DEAL
+    =============================== */
+
+    await client.query(
+      `
+      UPDATE deals
+      SET status = 'completed',
+          completed_at = NOW()
+      WHERE id = $1
+      `,
       [id]
     );
 
@@ -225,7 +271,8 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
     });
   } catch (e) {
     await client.query("ROLLBACK");
-    ctx.reply("❌ Deal completion failed.");
+    console.error("Deal completion failed:", e);
+    await ctx.reply("❌ Deal completion failed.");
   } finally {
     client.release();
   }

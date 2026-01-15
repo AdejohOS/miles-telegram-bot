@@ -64,7 +64,11 @@ export async function shopConfirmHandle(ctx) {
       throw new Error("Insufficient balance");
     }
 
-    // Deduct balance
+    /* ===============================
+       MONEY MOVEMENT
+    =============================== */
+
+    // Deduct user balance
     await client.query(
       `
       UPDATE user_balances
@@ -85,13 +89,29 @@ export async function shopConfirmHandle(ctx) {
     );
 
     // Create order
+    const orderRes = await client.query(
+      `
+      INSERT INTO shop_orders
+        (telegram_id, item_id, quantity, total_usd, status)
+      VALUES ($1, $2, $3, $4, 'paid')
+      RETURNING id
+      `,
+      [telegramId, itemId, quantity, totalUsd]
+    );
+
+    const orderId = orderRes.rows[0].id;
+
+    /* ===============================
+       TRANSACTION LOG (🔥 IMPORTANT)
+    =============================== */
+
     await client.query(
       `
-  INSERT INTO shop_orders
-  (telegram_id, item_id, quantity, total_usd, status)
-  VALUES ($1, $2, $3, $4, 'paid')
-  `,
-      [telegramId, itemId, quantity, totalUsd]
+      INSERT INTO transactions
+        (telegram_id, amount_usd, type, source, reference)
+      VALUES ($1, $2, 'debit', 'shop', $3)
+      `,
+      [telegramId, totalUsd, `order:${orderId}`]
     );
 
     await client.query("COMMIT");
@@ -108,6 +128,7 @@ export async function shopConfirmHandle(ctx) {
     );
   } catch (err) {
     await client.query("ROLLBACK");
+    console.error("Shop purchase failed:", err);
     await ctx.reply("❌ Purchase failed: " + err.message);
   } finally {
     client.release();

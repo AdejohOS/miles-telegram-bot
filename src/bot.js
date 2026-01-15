@@ -132,13 +132,12 @@ bot.action("deals", escrowMenu);
 
 bot.action("deal_create", async (ctx) => {
   ctx.session = { step: "deal_receiver" };
-
   await ctx.editMessageText(
     "👤 <b>Create Deal</b>\n\nSend receiver @username or Telegram ID:",
     {
       parse_mode: "HTML",
       reply_markup: Markup.inlineKeyboard([
-        Markup.button.callback("⬅ Cancel", "deals"),
+        [Markup.button.callback("⬅ Cancel", "deals")],
       ]).reply_markup,
     }
   );
@@ -210,24 +209,27 @@ bot.action(/deal_accept_(\d+)/, async (ctx) => {
   const id = ctx.match[1];
 
   await pool.query(
-    `UPDATE deals SET status = 'accepted' WHERE id = $1 AND status = 'pending'`,
+    `UPDATE deals SET status='accepted'
+     WHERE id=$1 AND status='pending'`,
     [id]
   );
 
-  await ctx.editMessageText("✅ Deal accepted.");
+  await ctx.editMessageText("✅ Deal accepted.", {
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback("⬅ Back", "deal_active")],
+    ]).reply_markup,
+  });
 });
 
 bot.action("deal_pending", async (ctx) => {
   const telegramId = ctx.from.id;
 
   const res = await pool.query(
-    `
-    SELECT id, sender_id, receiver_id, amount_usd, description
-    FROM deals
-    WHERE status = 'pending'
-      AND (sender_id = $1 OR receiver_id = $1)
-    ORDER BY created_at DESC
-    `,
+    `SELECT id, sender_id, receiver_id, amount_usd, description
+     FROM deals
+     WHERE status='pending'
+       AND (sender_id=$1 OR receiver_id=$1)
+     ORDER BY created_at DESC`,
     [telegramId]
   );
 
@@ -245,39 +247,37 @@ bot.action("deal_pending", async (ctx) => {
     res.rows
       .map((d) => {
         const role = d.sender_id === telegramId ? "You sent" : "You received";
-        return (
-          `<b>#${d.id}</b>\n` +
-          `${role}\n` +
-          `💵 $${d.amount_usd}\n` +
-          `📝 ${d.description}`
-        );
+        return `<b>#${d.id}</b>\n${role}\n💵 $${d.amount_usd}\n📝 ${d.description}`;
       })
       .join("\n\n");
 
-  const buttons = res.rows
-    .filter((d) => d.receiver_id === telegramId)
-    .map((d) => [
-      Markup.button.callback(`✅ Accept #${d.id}`, `deal_accept_${d.id}`),
-    ]);
+  const buttons = [];
 
-  buttons.push([Markup.button.callback("⬅ Back", "escrow")]);
+  res.rows.forEach((d) => {
+    if (d.receiver_id === telegramId) {
+      buttons.push([
+        Markup.button.callback(`✅ Accept #${d.id}`, `deal_accept_${d.id}`),
+      ]);
+    }
+  });
+
+  buttons.push([Markup.button.callback("⬅ Back", "deals")]);
 
   await ctx.editMessageText(text, {
     parse_mode: "HTML",
     reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
   });
 });
+
 bot.action("deal_active", async (ctx) => {
   const telegramId = ctx.from.id;
 
   const res = await pool.query(
-    `
-    SELECT id, sender_id, receiver_id, amount_usd, description
-    FROM deals
-    WHERE status = 'accepted'
-      AND (sender_id = $1 OR receiver_id = $1)
-    ORDER BY created_at DESC
-    `,
+    `SELECT id, sender_id, receiver_id, amount_usd, description
+     FROM deals
+     WHERE status='accepted'
+       AND (sender_id=$1 OR receiver_id=$1)
+     ORDER BY created_at DESC`,
     [telegramId]
   );
 
@@ -285,7 +285,7 @@ bot.action("deal_active", async (ctx) => {
     return ctx.editMessageText("📦 <b>Active Deals</b>\n\nNo active deals.", {
       parse_mode: "HTML",
       reply_markup: Markup.inlineKeyboard([
-        buttons.push([Markup.button.callback("⬅ Back", "deals")]),
+        [Markup.button.callback("⬅ Back", "deals")],
       ]).reply_markup,
     });
   }
@@ -295,22 +295,21 @@ bot.action("deal_active", async (ctx) => {
     res.rows
       .map((d) => {
         const role = d.sender_id === telegramId ? "You sent" : "You received";
-        return (
-          `<b>#${d.id}</b>\n` +
-          `${role}\n` +
-          `💵 $${d.amount_usd}\n` +
-          `📝 ${d.description}`
-        );
+        return `<b>#${d.id}</b>\n${role}\n💵 $${d.amount_usd}\n📝 ${d.description}`;
       })
       .join("\n\n");
 
-  const buttons = res.rows
-    .filter((d) => d.sender_id === telegramId)
-    .map((d) => [
-      Markup.button.callback(`💰 Complete #${d.id}`, `deal_complete_${d.id}`),
-    ]);
+  const buttons = [];
 
-  buttons.push([Markup.button.callback("⬅ Back", "escrow")]);
+  res.rows.forEach((d) => {
+    if (d.sender_id === telegramId) {
+      buttons.push([
+        Markup.button.callback(`💰 Complete #${d.id}`, `deal_complete_${d.id}`),
+      ]);
+    }
+  });
+
+  buttons.push([Markup.button.callback("⬅ Back", "deals")]);
 
   await ctx.editMessageText(text, {
     parse_mode: "HTML",
@@ -318,55 +317,60 @@ bot.action("deal_active", async (ctx) => {
   });
 });
 
-bot.action("deal_completed", async (ctx) => {
-  const telegramId = ctx.from.id;
+bot.action(/deal_complete_(\d+)/, async (ctx) => {
+  const id = ctx.match[1];
+  const client = await pool.connect();
 
-  const res = await pool.query(
-    `
-    SELECT id, sender_id, receiver_id, amount_usd, description, completed_at
-    FROM deals
-    WHERE status = 'completed'
-      AND (sender_id = $1 OR receiver_id = $1)
-    ORDER BY completed_at DESC
-    LIMIT 20
-    `,
-    [telegramId]
-  );
+  try {
+    await client.query("BEGIN");
 
-  if (!res.rows.length) {
-    return ctx.editMessageText(
-      "✅ <b>Completed Deals</b>\n\nNo completed deals.",
-      {
-        parse_mode: "HTML",
-        reply_markup: Markup.inlineKeyboard([
-          [Markup.button.callback("⬅ Back", "deals")],
-        ]),
-      }
+    const res = await client.query(
+      `SELECT sender_id, receiver_id, amount_usd
+       FROM deals
+       WHERE id=$1 AND status='accepted'
+       FOR UPDATE`,
+      [id]
     );
+
+    if (!res.rows.length) throw new Error("Deal not valid");
+
+    const { sender_id, receiver_id, amount_usd } = res.rows[0];
+
+    await client.query(
+      `UPDATE user_balances
+       SET locked_usd = locked_usd - $1,
+           balance_usd = balance_usd - $1
+       WHERE telegram_id = $2`,
+      [amount_usd, sender_id]
+    );
+
+    await client.query(
+      `UPDATE user_balances
+       SET balance_usd = balance_usd + $1
+       WHERE telegram_id = $2`,
+      [amount_usd, receiver_id]
+    );
+
+    await client.query(
+      `UPDATE deals
+       SET status='completed', completed_at=NOW()
+       WHERE id=$1`,
+      [id]
+    );
+
+    await client.query("COMMIT");
+
+    await ctx.editMessageText("💰 Deal completed. Receiver paid.", {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Back to Deals", "deals")],
+      ]).reply_markup,
+    });
+  } catch (e) {
+    await client.query("ROLLBACK");
+    ctx.reply("❌ Deal completion failed.");
+  } finally {
+    client.release();
   }
-
-  const text =
-    "✅ <b>Completed Deals</b>\n\n" +
-    res.rows
-      .map((d) => {
-        const role = d.sender_id === telegramId ? "You paid" : "You received";
-        const date = new Date(d.completed_at).toLocaleDateString();
-        return (
-          `<b>#${d.id}</b>\n` +
-          `${role}\n` +
-          `💵 $${d.amount_usd}\n` +
-          `📝 ${d.description}\n` +
-          `📅 ${date}`
-        );
-      })
-      .join("\n\n");
-
-  await ctx.editMessageText(text, {
-    parse_mode: "HTML",
-    reply_markup: Markup.inlineKeyboard([
-      [Markup.button.callback("⬅ Back", "escrow")],
-    ]).reply_markup,
-  });
 });
 
 bot.action("support", supportCommand);

@@ -536,10 +536,12 @@ bot.action(/withdraw_paid_(\d+)/, adminOnly, (ctx) =>
 );
 
 bot.command("admin_debit", adminOnly, adminDebit);
+
 bot.action("admin_debit", adminOnly, async (ctx) => {
   ctx.session = { step: "admin_debit" };
+
   await ctx.editMessageText(
-    "➖ <b>Admin Debit</b>\n\nSend:\n<code>telegram_id BTC|USDT amount reason</code>",
+    "➖ <b>Admin Debit</b>\n\nSend:\n<code>telegram_id amount reason</code>",
     { parse_mode: "HTML" }
   );
 });

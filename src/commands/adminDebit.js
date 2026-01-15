@@ -1,111 +1,93 @@
 import { pool } from "../db.js";
 
 export async function adminDebit(ctx) {
+  if (!ctx.message?.text) return;
+
+  const adminId = ctx.from.id;
+  const parts = ctx.message.text.trim().split(" ");
+
+  if (parts.length < 3) {
+    return ctx.reply("❌ Invalid format.\n\nUse:\ntelegram_id amount reason");
+  }
+
+  const telegramId = Number(parts[0]);
+  const amountUsd = Number(parts[1]);
+  const reason = parts.slice(2).join(" ");
+
+  if (!telegramId || !amountUsd || amountUsd <= 0) {
+    return ctx.reply("❌ Invalid telegram ID or amount.");
+  }
+
+  const client = await pool.connect();
+
   try {
-    let input;
+    await client.query("BEGIN");
 
-    // From inline UI
-    if (ctx.session?.step === "admin_debit") {
-      input = ctx.message.text.trim();
-    }
-    // From /admin_debit command
-    else {
-      input = ctx.message.text.replace("/admin_debit", "").trim();
-    }
+    // 🔒 Lock balance row
+    const balRes = await client.query(
+      `
+      SELECT balance_usd, locked_usd
+      FROM user_balances
+      WHERE telegram_id = $1
+      FOR UPDATE
+      `,
+      [telegramId]
+    );
 
-    const [telegramId, currencyRaw, amountRaw, ...reasonParts] =
-      input.split(" ");
-
-    if (!telegramId || !currencyRaw || !amountRaw) {
-      return ctx.reply(
-        "Usage:\n<code>telegram_id BTC|USDT amount [reason]</code>",
-        { parse_mode: "HTML" }
-      );
+    if (!balRes.rows.length) {
+      throw new Error("User balance not found");
     }
 
-    const currency = currencyRaw.toUpperCase();
-    if (!["BTC", "USDT"].includes(currency)) {
-      return ctx.reply("Currency must be BTC or USDT.");
+    const { balance_usd, locked_usd } = balRes.rows[0];
+    const available = balance_usd - locked_usd;
+
+    if (amountUsd > available) {
+      throw new Error("Insufficient available balance");
     }
 
-    const amount = Number(amountRaw);
-    if (!amount || amount <= 0) {
-      return ctx.reply("Invalid amount.");
-    }
+    // 💸 Deduct USD
+    await client.query(
+      `
+      UPDATE user_balances
+      SET balance_usd = balance_usd - $1,
+          updated_at = NOW()
+      WHERE telegram_id = $2
+      `,
+      [amountUsd, telegramId]
+    );
 
-    const reason = reasonParts.join(" ") || "Admin debit";
+    // 🧾 Log transaction
+    await client.query(
+      `
+      INSERT INTO transactions
+      (telegram_id, amount_usd, type, source, reference)
+      VALUES ($1, $2, 'debit', 'admin', $3)
+      `,
+      [telegramId, amountUsd, `admin:${adminId} | ${reason}`]
+    );
 
-    const client = await pool.connect();
+    await client.query("COMMIT");
 
-    try {
-      await client.query("BEGIN");
+    ctx.session = null;
 
-      // Lock balance row
-      const balRes = await client.query(
-        `
-        SELECT balance
-        FROM user_balances
-        WHERE telegram_id = $1 AND currency = $2
-        FOR UPDATE
-        `,
-        [telegramId, currency]
-      );
+    // ✅ Notify admin
+    await ctx.reply(
+      `✅ Debit successful\n\nUser: ${telegramId}\nAmount: $${amountUsd}`
+    );
 
-      if (!balRes.rows.length) {
-        throw new Error("User has no balance in this currency");
-      }
-
-      const balance = Number(balRes.rows[0].balance);
-
-      if (balance < amount) {
-        throw new Error("Insufficient balance");
-      }
-
-      // Deduct
-      await client.query(
-        `
-        UPDATE user_balances
-        SET balance = balance - $1
-        WHERE telegram_id = $2 AND currency = $3
-        `,
-        [amount, telegramId, currency]
-      );
-
-      // Log admin debit
-      await client.query(
-        `
-        INSERT INTO admin_debits
-        (admin_id, telegram_id, currency, amount, reason)
-        VALUES ($1, $2, $3, $4, $5)
-        `,
-        [ctx.from.id, telegramId, currency, amount, reason]
-      );
-
-      // Ledger
-      await client.query(
-        `
-        INSERT INTO transactions
-        (telegram_id, currency, amount, type, source, reference)
-        VALUES ($1, $2, $3, 'debit', 'admin', $4)
-        `,
-        [telegramId, currency, amount, `admin:${ctx.from.id}`]
-      );
-
-      await client.query("COMMIT");
-
-      ctx.session = null;
-
-      await ctx.reply(
-        `✅ Debited ${amount} ${currency} from ${telegramId}\nReason: ${reason}`
-      );
-    } catch (err) {
-      await client.query("ROLLBACK");
-      throw err;
-    } finally {
-      client.release();
-    }
+    // 🔔 Notify user
+    await ctx.telegram.sendMessage(
+      telegramId,
+      `⚠️ <b>Account Debited</b>\n\n` +
+        `Amount: <b>$${amountUsd}</b>\n` +
+        `Reason: ${reason}`,
+      { parse_mode: "HTML" }
+    );
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error("Admin debit failed:", err);
-    ctx.reply("❌ Debit failed: " + err.message);
+    await ctx.reply("❌ Debit failed: " + err.message);
+  } finally {
+    client.release();
   }
 }

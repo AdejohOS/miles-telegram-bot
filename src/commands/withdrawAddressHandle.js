@@ -3,7 +3,7 @@ import { pool } from "../db.js";
 export async function withdrawAddressHandle(ctx) {
   if (ctx.session?.step !== "withdraw_address") return;
 
-  const { network, amount } = ctx.session;
+  const { network, amount } = ctx.session; // network = BTC | USDT
   const address = ctx.message.text.trim();
   const telegramId = ctx.from.id;
 
@@ -45,14 +45,14 @@ export async function withdrawAddressHandle(ctx) {
       [amount, telegramId]
     );
 
-    // 📝 Create withdrawal request
+    // 📝 Create withdrawal request (✅ CORRECT COLUMNS)
     await client.query(
       `
       INSERT INTO withdrawal_requests
-      (telegram_id, currency, amount, address)
+      (telegram_id, amount_usd, payout_currency, address)
       VALUES ($1, $2, $3, $4)
       `,
-      [telegramId, network, amount, address]
+      [telegramId, amount, network, address]
     );
 
     await client.query("COMMIT");
@@ -60,16 +60,16 @@ export async function withdrawAddressHandle(ctx) {
     ctx.session = null;
 
     await ctx.reply(
-      "✅ *Withdrawal request submitted*\n\n" +
-        `Amount: *$${amount}*\n` +
-        `Network: *${network}*\n\n` +
+      "✅ <b>Withdrawal request submitted</b>\n\n" +
+        `💵 Amount: <b>$${amount}</b>\n` +
+        `🌐 Network: <b>${network}</b>\n\n` +
         "Funds are locked pending admin approval.",
-      { parse_mode: "Markdown" }
+      { parse_mode: "HTML" }
     );
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("Withdraw failed:", err);
-    ctx.reply("❌ Withdrawal failed: " + err.message);
+    await ctx.reply("❌ Withdrawal failed: " + err.message);
   } finally {
     client.release();
   }

@@ -235,7 +235,7 @@ bot.action("deal_pending", async (ctx) => {
     return ctx.editMessageText("⏳ <b>Pending Deals</b>\n\nNo pending deals.", {
       parse_mode: "HTML",
       reply_markup: Markup.inlineKeyboard([
-        buttons.push([Markup.button.callback("⬅ Back", "deals")]),
+        Markup.button.callback("⬅ Back", "deals"),
       ]).reply_markup,
     });
   }

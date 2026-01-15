@@ -108,8 +108,13 @@ bot.action(/admin_delete_item_(\d+)/, adminOnly, async (ctx) => {
 
   await pool.query(`UPDATE shop_items SET active = false WHERE id = $1`, [id]);
 
-  await ctx.editMessageText(`🗑 Item #${id} removed from shop.`);
+  await ctx.editMessageText("🗑 Item removed.", {
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback("⬅ Back to Shop", "admin_shop_menu")],
+    ]).reply_markup,
+  });
 });
+
 bot.action(/admin_edit_item_(\d+)/, adminOnly, async (ctx) => {
   const id = ctx.match[1];
 

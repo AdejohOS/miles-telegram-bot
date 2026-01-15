@@ -4,29 +4,30 @@ export async function editItemPrice(ctx) {
   if (ctx.session?.step !== "edit_item_price") return;
 
   const price = Number(ctx.message.text);
-  if (!price || price <= 0) return ctx.reply("Invalid price.");
+  if (!price || price <= 0) return ctx.reply("❌ Invalid price.");
 
-  ctx.session.price = price;
+  ctx.session.price_usd = price;
   ctx.session.step = "edit_item_stock";
 
-  await ctx.reply("Enter new stock:");
+  await ctx.reply("📦 Enter new stock:");
 }
 
 export async function editItemStock(ctx) {
   if (ctx.session?.step !== "edit_item_stock") return;
 
   const stock = Number(ctx.message.text);
-  if (stock < 0) return ctx.reply("Invalid stock.");
+  if (stock < 0) return ctx.reply("❌ Invalid stock.");
 
   await pool.query(
     `
     UPDATE shop_items
-    SET price = $1, stock = $2
+    SET price_usd = $1,
+        stock = $2
     WHERE id = $3
     `,
-    [ctx.session.price, stock, ctx.session.itemId]
+    [ctx.session.price_usd, stock, ctx.session.itemId]
   );
 
   ctx.session = null;
-  ctx.reply("✅ Item updated.");
+  await ctx.reply("✅ Item updated successfully.");
 }

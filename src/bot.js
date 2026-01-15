@@ -100,7 +100,11 @@ bot.action(/buy_(\d+)/, async (ctx) => {
     ]).reply_markup,
   });
 });
-bot.action("shop_confirm_yes", shopConfirmHandle);
+
+bot.action("shop_confirm_yes", async (ctx) => {
+  await ctx.answerCbQuery().catch(() => {});
+  return shopConfirmHandle(ctx);
+});
 
 bot.action(/admin_delete_item_(\d+)/, adminOnly, async (ctx) => {
   const id = ctx.match[1];

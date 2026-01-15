@@ -22,7 +22,9 @@ export async function shopQuantityHandle(ctx) {
 }
 
 export async function shopConfirmHandle(ctx) {
-  if (ctx.session?.step !== "shop_confirm") return;
+  if (ctx.session?.step !== "shop_confirm") {
+    return ctx.reply("❌ Session expired. Please try again.");
+  }
 
   const telegramId = ctx.from.id;
   const { itemId, quantity } = ctx.session;
@@ -85,10 +87,10 @@ export async function shopConfirmHandle(ctx) {
     // Create order
     await client.query(
       `
-      INSERT INTO shop_orders
-      (telegram_id, item_id, quantity, price_usd, status)
-      VALUES ($1, $2, $3, $4, 'paid')
-      `,
+  INSERT INTO shop_orders
+  (telegram_id, item_id, quantity, total_usd, status)
+  VALUES ($1, $2, $3, $4, 'paid')
+  `,
       [telegramId, itemId, quantity, totalUsd]
     );
 

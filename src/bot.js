@@ -228,25 +228,23 @@ bot.action("admin_credit_reject", adminOnly, adminCreditReject);
 
 bot.action("admin_find_user", adminOnly, adminFindUserStart);
 
-bot.action("admin_credit_found_user", adminOnly, adminCreditFromFoundUser);
-
-bot.action(/^credit_currency_(BTC|USDT|MANUAL)$/, adminOnly, async (ctx) => {
-  const currency = ctx.match[1];
-
+bot.action("admin_credit_found_user", adminOnly, async (ctx) => {
   if (!ctx.session?.creditUserId) {
     return ctx.answerCbQuery("No user selected.");
   }
 
   ctx.session.step = "awaiting_amount";
-  ctx.session.creditCurrency = currency;
+  ctx.session.payoutCurrency = "MANUAL"; // 👈 IMPORTANT
   ctx.session.adminMessageId = ctx.callbackQuery.message.message_id;
 
   await ctx.editMessageText(
-    `➕ *Credit User*\n\nCurrency: *${currency}*\n\nEnter amount to credit:`,
+    "➕ *Credit User*\n\n" +
+      "Source: *MANUAL*\n" +
+      "Enter *USD amount* to credit:",
     {
       parse_mode: "Markdown",
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Cancel", "admin_menu")],
+        [Markup.button.callback("⬅ Back", "admin_menu")],
       ]).reply_markup,
     }
   );

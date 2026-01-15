@@ -138,7 +138,7 @@ bot.action("deal_create", async (ctx) => {
     {
       parse_mode: "HTML",
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Cancel", "escrow")],
+        Markup.button.callback("⬅ Cancel", "deals"),
       ]).reply_markup,
     }
   );
@@ -235,7 +235,7 @@ bot.action("deal_pending", async (ctx) => {
     return ctx.editMessageText("⏳ <b>Pending Deals</b>\n\nNo pending deals.", {
       parse_mode: "HTML",
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Back", "deals")],
+        buttons.push([Markup.button.callback("⬅ Back", "deals")]),
       ]).reply_markup,
     });
   }
@@ -285,7 +285,7 @@ bot.action("deal_active", async (ctx) => {
     return ctx.editMessageText("📦 <b>Active Deals</b>\n\nNo active deals.", {
       parse_mode: "HTML",
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Back", "deals")],
+        buttons.push([Markup.button.callback("⬅ Back", "deals")]),
       ]).reply_markup,
     });
   }
@@ -338,7 +338,7 @@ bot.action("deal_completed", async (ctx) => {
       {
         parse_mode: "HTML",
         reply_markup: Markup.inlineKeyboard([
-          [Markup.button.callback("⬅ Back", "deals")],
+          Markup.button.callback("⬅ Back", "deals"),
         ]).reply_markup,
       }
     );

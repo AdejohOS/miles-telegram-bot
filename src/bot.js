@@ -32,7 +32,6 @@ import { adminCreditReject } from "./commands/adminCreditReject.js";
 import { adminFindUserStart } from "./commands/adminFindUserStart.js";
 import { adminFindUserHandle } from "./commands/adminFindUserHandle.js";
 
-import { adminCreditFromFoundUser } from "./commands/adminCreditFromFoundUser.js";
 import { adminWithdrawals } from "./commands/adminWithdrawals.js";
 import { adminWithdrawApprove } from "./commands/adminWithdrawApprove.js";
 import { adminWithdrawReject } from "./commands/adminWithdrawReject.js";

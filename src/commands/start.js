@@ -21,7 +21,8 @@ export async function startCommand(ctx) {
   }
 
   const text =
-    "👋 *Hello! Welcome to Miles Trader Bot*\n\nBelow are menus for you to access your profile, deposit, withdrawals, shop, support and escrow services.";
+    "👋 *Welcome to Miles Trader Bot*\n\n" +
+    "Manage your profile, USD balance, shop purchases, escrow deals, and support from the menu below.";
 
   const keyboard = Markup.inlineKeyboard([
     [Markup.button.url("🌐 Group Chat", "https://t.me/milestraderchat")],
@@ -37,29 +38,32 @@ export async function startCommand(ctx) {
     [Markup.button.callback("📜 My Orders", "orders")],
     [Markup.button.callback("📞 Support", "support")],
   ]);
+
   if (isAdmin) {
     keyboard.reply_markup.inline_keyboard.push([
       Markup.button.callback("🛠 Admin Panel", "admin_menu"),
     ]);
   }
-  //  Save / update user in DB
 
+  /* =========================
+     SAVE / UPDATE USER
+  ========================= */
   try {
     await pool.query(
       `
-        INSERT INTO users (telegram_id, username)
-        VALUES ($1, $2)
-        ON CONFLICT (telegram_id)
-        DO UPDATE SET username = EXCLUDED.username
+      INSERT INTO users (telegram_id, username)
+      VALUES ($1, $2)
+      ON CONFLICT (telegram_id)
+      DO UPDATE SET username = EXCLUDED.username
       `,
       [telegramId, username]
     );
 
+    // ✅ Ensure USD balance row exists
     await pool.query(
       `
       INSERT INTO user_balances (telegram_id, balance_usd)
-      VALUES
-        ($1, 0),
+      VALUES ($1, 0)
       ON CONFLICT (telegram_id) DO NOTHING
       `,
       [telegramId]
@@ -68,26 +72,26 @@ export async function startCommand(ctx) {
     console.error("DB error in startCommand:", err);
   }
 
+  /* =========================
+     SEND / EDIT MESSAGE
+  ========================= */
   try {
-    // If coming from inline button → EDIT
     if (ctx.callbackQuery) {
-      await ctx.answerCbQuery();
+      await ctx.answerCbQuery().catch(() => {});
       return await ctx.editMessageText(text, {
         parse_mode: "Markdown",
-        ...keyboard,
+        reply_markup: keyboard.reply_markup,
       });
     }
 
-    // If coming from /start → REPLY (first message)
     return await ctx.reply(text, {
       parse_mode: "Markdown",
-      ...keyboard,
+      reply_markup: keyboard.reply_markup,
     });
-  } catch (err) {
-    // Fallback (rare)
+  } catch {
     return await ctx.reply(text, {
       parse_mode: "Markdown",
-      ...keyboard,
+      reply_markup: keyboard.reply_markup,
     });
   }
 }

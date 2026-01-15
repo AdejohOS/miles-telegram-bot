@@ -1,4 +1,5 @@
 import { pool } from "../db.js";
+import { notifyAdmins } from "../utils/helper.js";
 
 export async function withdrawAddressHandle(ctx) {
   if (ctx.session?.step !== "withdraw_address") return;
@@ -56,6 +57,23 @@ export async function withdrawAddressHandle(ctx) {
     );
 
     await client.query("COMMIT");
+
+    await client.query("COMMIT");
+
+    // 🔔 Notify admins
+    await notifyAdmins(
+      ctx.bot,
+      `🚨 <b>New Withdrawal Request</b>
+
+👤 User ID: <code>${telegramId}</code>
+💵 Amount: <b>$${amount}</b>
+🌐 Network: <b>${network}</b>
+📍 Address:
+<code>${address}</code>`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("💸 View Withdrawals", "admin_withdrawals")],
+      ]).reply_markup
+    );
 
     ctx.session = null;
 

@@ -50,7 +50,6 @@ import { adminDebit } from "./commands/adminDebit.js";
 import {
   addItemTitle,
   addItemPrice,
-  addItemCurrency,
   addItemStock,
 } from "./commands/adminShopAdd.js";
 
@@ -348,7 +347,6 @@ bot.on("message", async (ctx, next) => {
 
     if (ctx.session.step === "add_item_title") return addItemTitle(ctx);
     if (ctx.session.step === "add_item_price") return addItemPrice(ctx);
-    if (ctx.session.step === "add_item_currency") return addItemCurrency(ctx);
     if (ctx.session.step === "add_item_stock") return addItemStock(ctx);
 
     if (ctx.session.step === "awaiting_address") return adminHandleAddress(ctx);

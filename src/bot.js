@@ -230,7 +230,7 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
 });
 
 bot.action("deal_pending", async (ctx) => {
-  const telegramId = ctx.from.id;
+  const telegramId = Number(ctx.from.id);
 
   const res = await pool.query(
     `
@@ -268,12 +268,19 @@ bot.action("deal_pending", async (ctx) => {
       })
       .join("\n\n");
 
-  // 👇 ACCEPT BUTTON ONLY FOR RECEIVER
-  const buttons = res.rows
-    .filter((d) => d.receiver_id === telegramId)
-    .map((d) => [
-      Markup.button.callback(`✅ Accept Deal #${d.id}`, `deal_accept_${d.id}`),
-    ]);
+  const buttons = [];
+
+  for (const d of res.rows) {
+    // ✅ ACCEPT ONLY FOR RECEIVER
+    if (Number(d.receiver_id) === telegramId) {
+      buttons.push([
+        Markup.button.callback(
+          `✅ Accept Deal #${d.id}`,
+          `deal_accept_${d.id}`
+        ),
+      ]);
+    }
+  }
 
   buttons.push([Markup.button.callback("⬅ Back", "deals")]);
 

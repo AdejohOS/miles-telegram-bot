@@ -158,6 +158,61 @@ bot.action(/deal_accept_(\d+)/, async (ctx) => {
     ]).reply_markup,
   });
 });
+bot.action(/deal_complete_(\d+)/, async (ctx) => {
+  const id = ctx.match[1];
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const res = await client.query(
+      `SELECT sender_id, receiver_id, amount_usd
+       FROM deals
+       WHERE id=$1 AND status='accepted'
+       FOR UPDATE`,
+      [id]
+    );
+
+    if (!res.rows.length) throw new Error("Deal not valid");
+
+    const { sender_id, receiver_id, amount_usd } = res.rows[0];
+
+    await client.query(
+      `UPDATE user_balances
+       SET locked_usd = locked_usd - $1,
+           balance_usd = balance_usd - $1
+       WHERE telegram_id = $2`,
+      [amount_usd, sender_id]
+    );
+
+    await client.query(
+      `UPDATE user_balances
+       SET balance_usd = balance_usd + $1
+       WHERE telegram_id = $2`,
+      [amount_usd, receiver_id]
+    );
+
+    await client.query(
+      `UPDATE deals
+       SET status='completed', completed_at=NOW()
+       WHERE id=$1`,
+      [id]
+    );
+
+    await client.query("COMMIT");
+
+    await ctx.editMessageText("💰 Deal completed. Receiver paid.", {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Back to Deals", "deals")],
+      ]).reply_markup,
+    });
+  } catch (e) {
+    await client.query("ROLLBACK");
+    ctx.reply("❌ Deal completion failed.");
+  } finally {
+    client.release();
+  }
+});
 
 bot.action("deal_pending", async (ctx) => {
   const telegramId = ctx.from.id;

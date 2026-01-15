@@ -1,14 +1,13 @@
 import { ADMIN_IDS } from "../config.js";
 
-function formatBalance(balance) {
+export function formatBalance(balance) {
   return Number(balance).toFixed(2);
 }
-export { formatBalance };
 
-export async function notifyAdmins(bot, message, keyboard = null) {
+export async function notifyAdmins(telegram, message, keyboard = null) {
   for (const adminId of ADMIN_IDS) {
     try {
-      await bot.telegram.sendMessage(adminId, message, {
+      await telegram.sendMessage(adminId, message, {
         parse_mode: "HTML",
         ...(keyboard ? { reply_markup: keyboard } : {}),
       });

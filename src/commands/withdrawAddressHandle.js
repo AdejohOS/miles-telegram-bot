@@ -61,7 +61,7 @@ export async function withdrawAddressHandle(ctx) {
 
     // 🔔 Notify admins
     await notifyAdmins(
-      ctx.bot,
+      ctx.telegram,
       `🚨 <b>New Withdrawal Request</b>
 
 👤 User ID: <code>${telegramId}</code>

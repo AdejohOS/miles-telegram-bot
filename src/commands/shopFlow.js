@@ -1,19 +1,30 @@
 import { pool } from "../db.js";
+import { Markup } from "telegraf";
+
 export async function shopQuantityHandle(ctx) {
   if (ctx.session?.step !== "shop_quantity") return;
 
   const qty = Number(ctx.message.text);
-  if (!qty || qty <= 0) return ctx.reply("Invalid quantity.");
+  if (!qty || qty <= 0) return ctx.reply("❌ Invalid quantity.");
 
   ctx.session.quantity = qty;
   ctx.session.step = "shop_confirm";
 
-  await ctx.reply("Confirm purchase? Type YES to continue.");
+  await ctx.reply(`Confirm purchase of *${qty}* item(s)?`, {
+    parse_mode: "Markdown",
+    reply_markup: Markup.inlineKeyboard([
+      [
+        Markup.button.callback("✅ YES", "shop_confirm_yes"),
+        Markup.button.callback("❌ Cancel", "shop_menu"),
+      ],
+    ]).reply_markup,
+  });
 }
+
+import { pool } from "../db.js";
 
 export async function shopConfirmHandle(ctx) {
   if (ctx.session?.step !== "shop_confirm") return;
-  if (ctx.message.text.toLowerCase() !== "yes") return ctx.reply("Cancelled.");
 
   const telegramId = ctx.from.id;
   const { itemId, quantity } = ctx.session;
@@ -25,7 +36,7 @@ export async function shopConfirmHandle(ctx) {
 
     const itemRes = await client.query(
       `
-      SELECT title, price, currency, stock
+      SELECT title, price_usd, stock
       FROM shop_items
       WHERE id = $1
       FOR UPDATE
@@ -34,31 +45,33 @@ export async function shopConfirmHandle(ctx) {
     );
 
     const item = itemRes.rows[0];
-    if (!item || item.stock < quantity) throw new Error("Out of stock");
+    if (!item) throw new Error("Item not found");
+    if (item.stock < quantity) throw new Error("Not enough stock");
 
-    const total = item.price * quantity;
+    const totalUsd = item.price_usd * quantity;
 
     const balRes = await client.query(
       `
-      SELECT balance
+      SELECT balance_usd
       FROM user_balances
-      WHERE telegram_id = $1 AND currency = $2
+      WHERE telegram_id = $1
       FOR UPDATE
       `,
-      [telegramId, item.currency]
+      [telegramId]
     );
 
-    if (!balRes.rows.length || balRes.rows[0].balance < total)
+    if (!balRes.rows.length || balRes.rows[0].balance_usd < totalUsd) {
       throw new Error("Insufficient balance");
+    }
 
     // Deduct balance
     await client.query(
       `
       UPDATE user_balances
-      SET balance = balance - $1
-      WHERE telegram_id = $2 AND currency = $3
+      SET balance_usd = balance_usd - $1
+      WHERE telegram_id = $2
       `,
-      [total, telegramId, item.currency]
+      [totalUsd, telegramId]
     );
 
     // Reduce stock
@@ -75,16 +88,24 @@ export async function shopConfirmHandle(ctx) {
     await client.query(
       `
       INSERT INTO shop_orders
-      (telegram_id, item_id, quantity, price, currency, status)
-      VALUES ($1, $2, $3, $4, $5, 'paid')
+      (telegram_id, item_id, quantity, price_usd, status)
+      VALUES ($1, $2, $3, $4, 'paid')
       `,
-      [telegramId, itemId, quantity, total, item.currency]
+      [telegramId, itemId, quantity, totalUsd]
     );
 
     await client.query("COMMIT");
 
     ctx.session = null;
-    await ctx.reply(`✅ Purchased ${item.title} ×${quantity}`);
+
+    await ctx.reply(
+      `✅ Purchase successful!\n\n🛍 ${item.title}\n📦 Quantity: ${quantity}\n💲 Total: $${totalUsd}`,
+      {
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback("⬅ Back to Shop", "shop_menu")],
+        ]).reply_markup,
+      }
+    );
   } catch (err) {
     await client.query("ROLLBACK");
     await ctx.reply("❌ Purchase failed: " + err.message);

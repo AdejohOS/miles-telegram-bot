@@ -83,6 +83,8 @@ bot.action("deposit_usdt_trc20", (ctx) => depositUSDTTRC20(ctx, "usdt_trc20"));
 //bot.action("deposit_usdt_erc20", (ctx) => depositAddress(ctx, "usdt_erc20"));
 
 bot.action("profile", profileCommand);
+
+//Shop
 bot.action("shop_menu", shopMenu);
 bot.action(/buy_(\d+)/, async (ctx) => {
   const itemId = ctx.match[1];
@@ -90,14 +92,16 @@ bot.action(/buy_(\d+)/, async (ctx) => {
   ctx.session = {
     step: "shop_quantity",
     itemId,
+    messageId: ctx.callbackQuery.message.message_id,
   };
 
-  await ctx.editMessageText("Enter quantity to buy:", {
+  await ctx.editMessageText("🛍 Enter quantity to buy:", {
     reply_markup: Markup.inlineKeyboard([
-      [Markup.button.callback("⬅ Cancel", "shop_menu")],
+      [Markup.button.callback("⬅ Back to Shop", "shop_menu")],
     ]).reply_markup,
   });
 });
+bot.action("shop_confirm_yes", shopConfirmHandle);
 
 bot.action(/admin_delete_item_(\d+)/, adminOnly, async (ctx) => {
   const id = ctx.match[1];

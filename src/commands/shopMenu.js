@@ -1,18 +1,15 @@
 import { pool } from "../db.js";
 import { Markup } from "telegraf";
-import { formatBalance } from "../utils/helper.js";
 
 export async function shopMenu(ctx) {
   await ctx.answerCbQuery?.().catch(() => {});
 
-  const res = await pool.query(
-    `
-    SELECT id, title, price, currency, stock
+  const res = await pool.query(`
+    SELECT id, title, price_usd, stock
     FROM shop_items
     WHERE active = true
     ORDER BY id
-    `
-  );
+  `);
 
   if (!res.rows.length) {
     return ctx.editMessageText("🛒 Shop is empty right now.", {
@@ -24,16 +21,14 @@ export async function shopMenu(ctx) {
 
   const lines = res.rows.map(
     (i) =>
-      `#${i.id} — ${i.title} (${formatBalance(i.price)} ${i.currency}, Stock: ${
-        i.stock
-      })`
+      `#${i.id} — ${i.title}\n💲 Price: $${i.price_usd} | 📦 Stock: ${i.stock}`
   );
 
-  await ctx.editMessageText("🛒 <b>Shop</b>\n\n" + lines.join("\n"), {
+  await ctx.editMessageText("🛒 <b>Shop</b>\n\n" + lines.join("\n\n"), {
     parse_mode: "HTML",
     reply_markup: Markup.inlineKeyboard(
       res.rows
-        .map((i) => [Markup.button.callback(`Buy ${i.title}`, `buy_${i.id}`)])
+        .map((i) => [Markup.button.callback(`🛍 Buy ${i.title}`, `buy_${i.id}`)])
         .concat([
           [Markup.button.callback("🔍 Search", "shop_search")],
           [Markup.button.callback("⬅ Back to Main Menu", "main_menu")],

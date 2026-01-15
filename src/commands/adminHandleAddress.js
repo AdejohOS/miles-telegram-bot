@@ -33,20 +33,24 @@ export async function adminHandleAddress(ctx) {
     step: "awaiting_amount",
     adminMessageId: msgId,
     creditUserId: user.telegram_id,
-    payoutCurrency: currency,
+    payoutCurrency: currency, // BTC | USDT
   };
 
   await ctx.telegram.editMessageText(
     chatId,
     msgId,
     null,
-    `✅ *User Found*\n\n` +
-      `Telegram ID: \`${user.telegram_id}\`\n` +
-      `Username: ${user.username ? "@" + user.username : "N/A"}\n` +
-      `Deposit Network: ${currency}\n\n` +
-      `Enter *USD amount* to credit:`,
+    `
+<b>✅ User Found</b>
+
+<b>Telegram ID:</b> ${user.telegram_id}
+<b>Username:</b> ${user.username ? "@" + user.username : "N/A"}
+<b>Deposit Network:</b> ${currency}
+
+<b>Enter USD amount to credit:</b>
+    `,
     {
-      parse_mode: "Markdown",
+      parse_mode: "HTML",
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback("⬅ Back", "admin_credit_address")],
       ]).reply_markup,

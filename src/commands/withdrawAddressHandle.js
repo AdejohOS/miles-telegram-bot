@@ -5,7 +5,7 @@ import { notifyAdmins } from "../utils/helper.js";
 export async function withdrawAddressHandle(ctx) {
   if (ctx.session?.step !== "withdraw_address") return;
 
-  const { network, amount } = ctx.session; // network = BTC | USDT
+  const { network, amount } = ctx.session; // BTC | USDT
   const address = ctx.message.text.trim();
   const telegramId = ctx.from.id;
 
@@ -47,7 +47,7 @@ export async function withdrawAddressHandle(ctx) {
       [amount, telegramId]
     );
 
-    // 📝 Create withdrawal request (✅ CORRECT COLUMNS)
+    // 📝 Create withdrawal request
     await client.query(
       `
       INSERT INTO withdrawal_requests
@@ -56,8 +56,6 @@ export async function withdrawAddressHandle(ctx) {
       `,
       [telegramId, amount, network, address]
     );
-
-    await client.query("COMMIT");
 
     await client.query("COMMIT");
 

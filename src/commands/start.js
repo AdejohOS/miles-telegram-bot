@@ -57,11 +57,10 @@ export async function startCommand(ctx) {
 
     await pool.query(
       `
-      INSERT INTO user_balances (telegram_id, currency)
+      INSERT INTO user_balances (telegram_id, balance_usd)
       VALUES
-        ($1, 'BTC'),
-        ($1, 'USDT')
-      ON CONFLICT (telegram_id, currency) DO NOTHING
+        ($1, 0),
+      ON CONFLICT (telegram_id) DO NOTHING
       `,
       [telegramId]
     );

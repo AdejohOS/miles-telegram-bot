@@ -144,20 +144,35 @@ bot.action("deal_create", async (ctx) => {
 });
 
 bot.action(/deal_accept_(\d+)/, async (ctx) => {
-  const id = ctx.match[1];
+  const dealId = ctx.match[1];
+  const telegramId = ctx.from.id;
 
-  await pool.query(
-    `UPDATE deals SET status='accepted'
-     WHERE id=$1 AND status='pending'`,
-    [id]
+  const res = await pool.query(
+    `
+    UPDATE deals
+    SET status = 'accepted'
+    WHERE id = $1
+      AND receiver_id = $2
+      AND status = 'pending'
+    RETURNING id
+    `,
+    [dealId, telegramId]
   );
 
-  await ctx.editMessageText("✅ Deal accepted.", {
-    reply_markup: Markup.inlineKeyboard([
-      [Markup.button.callback("⬅ Back", "deal_active")],
-    ]).reply_markup,
-  });
+  if (!res.rows.length) {
+    return ctx.answerCbQuery("❌ You cannot accept this deal.");
+  }
+
+  await ctx.editMessageText(
+    "✅ Deal accepted.\n\nWaiting for sender to complete.",
+    {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Back to Deals", "deals")],
+      ]).reply_markup,
+    }
+  );
 });
+
 bot.action(/deal_complete_(\d+)/, async (ctx) => {
   const id = ctx.match[1];
   const client = await pool.connect();
@@ -218,11 +233,13 @@ bot.action("deal_pending", async (ctx) => {
   const telegramId = ctx.from.id;
 
   const res = await pool.query(
-    `SELECT id, sender_id, receiver_id, amount_usd, description
-     FROM deals
-     WHERE status='pending'
-       AND (sender_id=$1 OR receiver_id=$1)
-     ORDER BY created_at DESC`,
+    `
+    SELECT id, sender_id, receiver_id, amount_usd, description
+    FROM deals
+    WHERE status = 'pending'
+      AND (sender_id = $1 OR receiver_id = $1)
+    ORDER BY created_at DESC
+    `,
     [telegramId]
   );
 
@@ -239,20 +256,24 @@ bot.action("deal_pending", async (ctx) => {
     "⏳ <b>Pending Deals</b>\n\n" +
     res.rows
       .map((d) => {
-        const role = d.sender_id === telegramId ? "You sent" : "You received";
-        return `<b>#${d.id}</b>\n${role}\n💵 $${d.amount_usd}\n📝 ${d.description}`;
+        const role =
+          d.sender_id === telegramId ? "📤 You sent" : "📥 You received";
+
+        return (
+          `<b>#${d.id}</b>\n` +
+          `${role}\n` +
+          `💵 $${d.amount_usd}\n` +
+          `📝 ${d.description}`
+        );
       })
       .join("\n\n");
 
-  const buttons = [];
-
-  res.rows.forEach((d) => {
-    if (d.receiver_id === telegramId) {
-      buttons.push([
-        Markup.button.callback(`✅ Accept #${d.id}`, `deal_accept_${d.id}`),
-      ]);
-    }
-  });
+  // 👇 ACCEPT BUTTON ONLY FOR RECEIVER
+  const buttons = res.rows
+    .filter((d) => d.receiver_id === telegramId)
+    .map((d) => [
+      Markup.button.callback(`✅ Accept Deal #${d.id}`, `deal_accept_${d.id}`),
+    ]);
 
   buttons.push([Markup.button.callback("⬅ Back", "deals")]);
 

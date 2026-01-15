@@ -12,7 +12,7 @@ export async function adminFindUserHandle(ctx) {
   let telegramId;
   let foundBy;
 
-  // Telegram ID
+  // 1️⃣ Telegram ID
   if (/^\d+$/.test(input)) {
     foundBy = "Telegram ID";
     const r = await pool.query(
@@ -22,7 +22,7 @@ export async function adminFindUserHandle(ctx) {
     telegramId = r.rows[0]?.telegram_id;
   }
 
-  // Username
+  // 2️⃣ Username
   else if (input.startsWith("@")) {
     foundBy = "Username";
     const r = await pool.query(
@@ -32,7 +32,7 @@ export async function adminFindUserHandle(ctx) {
     telegramId = r.rows[0]?.telegram_id;
   }
 
-  // Wallet address
+  // 3️⃣ Wallet Address
   else {
     foundBy = "Wallet Address";
     const r = await pool.query(
@@ -56,20 +56,25 @@ export async function adminFindUserHandle(ctx) {
     );
   }
 
-  const user = await pool.query(
+  // Fetch user
+  const userRes = await pool.query(
     `SELECT telegram_id, username FROM users WHERE telegram_id = $1`,
     [telegramId]
   );
 
-  const bal = await pool.query(
-    `SELECT balance_usd, locked_usd FROM user_balances WHERE telegram_id = $1`,
+  const user = userRes.rows[0];
+
+  // Fetch balance
+  const balRes = await pool.query(
+    `SELECT balance_usd FROM user_balances WHERE telegram_id = $1`,
     [telegramId]
   );
 
-  const balance = bal.rows[0]
-    ? `$${formatBalance(bal.rows[0].balance_usd)}`
+  const balanceUsd = balRes.rows.length
+    ? `$${formatBalance(balRes.rows[0].balance_usd)}`
     : "$0.00";
 
+  // Keep session for next step
   ctx.session = {
     step: "found_user",
     adminMessageId: msgId,
@@ -80,15 +85,17 @@ export async function adminFindUserHandle(ctx) {
     chatId,
     msgId,
     null,
-    `✅ *User Found*\n\n` +
-      `Found by: ${foundBy}\n` +
-      `Telegram ID: \`${user.rows[0].telegram_id}\`\n` +
-      `Username: ${
-        user.rows[0].username ? "@" + user.rows[0].username : "N/A"
-      }\n\n` +
-      `💰 *Balance:* ${balance}`,
+    `
+<b>✅ User Found</b>
+
+<b>Found by:</b> ${foundBy}
+<b>Telegram ID:</b> ${user.telegram_id}
+<b>Username:</b> ${user.username ? "@" + user.username : "N/A"}
+
+<b>💰 Balance:</b> ${balanceUsd}
+    `,
     {
-      parse_mode: "Markdown",
+      parse_mode: "HTML",
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback("➕ Credit User", "admin_credit_found_user")],
         [Markup.button.callback("⬅ Back", "admin_menu")],

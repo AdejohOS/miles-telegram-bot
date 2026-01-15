@@ -236,8 +236,8 @@ bot.action("deal_pending", async (ctx) => {
     `
     SELECT id, sender_id, receiver_id, amount_usd, description
     FROM deals
-    WHERE status = 'pending'
-      AND (sender_id = $1 OR receiver_id = $1)
+    WHERE status='pending'
+      AND (sender_id=$1 OR receiver_id=$1)
     ORDER BY created_at DESC
     `,
     [viewerId]
@@ -259,12 +259,7 @@ bot.action("deal_pending", async (ctx) => {
         const role =
           Number(d.sender_id) === viewerId ? "📤 You sent" : "📥 You received";
 
-        return (
-          `<b>#${d.id}</b>\n` +
-          `${role}\n` +
-          `💵 $${d.amount_usd}\n` +
-          `📝 ${d.description}`
-        );
+        return `<b>#${d.id}</b>\n${role}\n💵 $${d.amount_usd}\n📝 ${d.description}`;
       })
       .join("\n\n");
 
@@ -273,10 +268,7 @@ bot.action("deal_pending", async (ctx) => {
   for (const d of res.rows) {
     if (Number(d.receiver_id) === viewerId) {
       buttons.push([
-        Markup.button.callback(
-          `✅ Accept Deal #${d.id}`,
-          `deal_accept_${d.id}`
-        ),
+        Markup.button.callback(`✅ Accept #${d.id}`, `deal_accept_${d.id}`),
       ]);
     }
   }
@@ -290,15 +282,17 @@ bot.action("deal_pending", async (ctx) => {
 });
 
 bot.action("deal_active", async (ctx) => {
-  const telegramId = ctx.from.id;
+  const viewerId = Number(ctx.from.id);
 
   const res = await pool.query(
-    `SELECT id, sender_id, receiver_id, amount_usd, description
-     FROM deals
-     WHERE status='accepted'
-       AND (sender_id=$1 OR receiver_id=$1)
-     ORDER BY created_at DESC`,
-    [telegramId]
+    `
+    SELECT id, sender_id, receiver_id, amount_usd, description
+    FROM deals
+    WHERE status='accepted'
+      AND (sender_id=$1 OR receiver_id=$1)
+    ORDER BY created_at DESC
+    `,
+    [viewerId]
   );
 
   if (!res.rows.length) {
@@ -314,20 +308,22 @@ bot.action("deal_active", async (ctx) => {
     "📦 <b>Active Deals</b>\n\n" +
     res.rows
       .map((d) => {
-        const role = d.sender_id === telegramId ? "You sent" : "You received";
+        const role =
+          Number(d.sender_id) === viewerId ? "📤 You sent" : "📥 You received";
+
         return `<b>#${d.id}</b>\n${role}\n💵 $${d.amount_usd}\n📝 ${d.description}`;
       })
       .join("\n\n");
 
   const buttons = [];
 
-  res.rows.forEach((d) => {
-    if (d.sender_id === telegramId) {
+  for (const d of res.rows) {
+    if (Number(d.sender_id) === viewerId) {
       buttons.push([
         Markup.button.callback(`💰 Complete #${d.id}`, `deal_complete_${d.id}`),
       ]);
     }
-  });
+  }
 
   buttons.push([Markup.button.callback("⬅ Back", "deals")]);
 
@@ -338,16 +334,17 @@ bot.action("deal_active", async (ctx) => {
 });
 
 bot.action("deal_completed", async (ctx) => {
-  const telegramId = ctx.from.id;
+  const viewerId = Number(ctx.from.id);
 
   const res = await pool.query(
-    `SELECT id, sender_id, receiver_id, amount_usd, description, completed_at
-     FROM deals
-     WHERE status='completed'
-       AND (sender_id=$1 OR receiver_id=$1)
-     ORDER BY completed_at DESC
-     LIMIT 20`,
-    [telegramId]
+    `
+    SELECT id, sender_id, receiver_id, amount_usd, description, completed_at
+    FROM deals
+    WHERE status='completed'
+      AND (sender_id=$1 OR receiver_id=$1)
+    ORDER BY completed_at DESC
+    `,
+    [viewerId]
   );
 
   if (!res.rows.length) {
@@ -366,9 +363,10 @@ bot.action("deal_completed", async (ctx) => {
     "✅ <b>Completed Deals</b>\n\n" +
     res.rows
       .map((d) => {
-        const role = d.sender_id === telegramId ? "You paid" : "You received";
-        const date = new Date(d.completed_at).toLocaleDateString();
-        return `<b>#${d.id}</b>\n${role}\n💵 $${d.amount_usd}\n📅 ${date}\n📝 ${d.description}`;
+        const role =
+          Number(d.sender_id) === viewerId ? "💸 You paid" : "💰 You received";
+
+        return `<b>#${d.id}</b>\n${role}\n💵 $${d.amount_usd}\n📝 ${d.description}`;
       })
       .join("\n\n");
 

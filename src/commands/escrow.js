@@ -9,10 +9,9 @@ export async function escrowMenu(ctx) {
       [Markup.button.callback("➕ Make a Deal", "deal_create")],
       [Markup.button.callback("📦 Active Deals", "deal_active")],
       [
-        Markup.button.callback("⏳ Awaiting", "deal_pending"),
+        Markup.button.callback("⏳ Pending", "deal_pending"),
         Markup.button.callback("✅ Completed", "deal_completed"),
       ],
-      [Markup.button.callback("⚖ Disputes", "deal_disputes")],
       [Markup.button.callback("⬅ Back to Main Menu", "main_menu")],
     ]).reply_markup,
   });

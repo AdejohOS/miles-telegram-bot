@@ -1,7 +1,7 @@
 import { pool } from "../db.js";
 import { Markup } from "telegraf";
 
-/* STEP 1 — Receiver */
+/* STEP 1 — RECEIVER */
 export async function dealReceiver(ctx) {
   const input = ctx.message.text.trim();
 
@@ -21,13 +21,13 @@ export async function dealReceiver(ctx) {
     });
   }
 
-  ctx.session.receiverId = res.rows[0].telegram_id;
+  ctx.session.receiverId = Number(res.rows[0].telegram_id);
   ctx.session.step = "deal_amount";
 
-  await ctx.reply("💵 Enter deal amount in USD:");
+  await ctx.reply("💵 Enter deal amount (USD):");
 }
 
-/* STEP 2 — Amount */
+/* STEP 2 — AMOUNT */
 export async function dealAmount(ctx) {
   const amount = Number(ctx.message.text);
   if (!amount || amount <= 0) return ctx.reply("❌ Invalid amount.");
@@ -38,10 +38,10 @@ export async function dealAmount(ctx) {
   await ctx.reply("📝 Describe the deal:");
 }
 
-/* STEP 3 — Description + CREATE DEAL */
+/* STEP 3 — DESCRIPTION + CREATE */
 export async function dealDesc(ctx) {
   const description = ctx.message.text;
-  const senderId = ctx.from.id;
+  const senderId = Number(ctx.from.id);
   const { receiverId, amount_usd } = ctx.session;
 
   const client = await pool.connect();
@@ -90,7 +90,7 @@ export async function dealDesc(ctx) {
 
     await ctx.telegram.sendMessage(
       receiverId,
-      `📨 <b>New Deal Request</b>\n\n💵 $${amount_usd}\n📝 ${description}\n\nCheck Deals to accept.`,
+      `📨 <b>New Deal Request</b>\n\n💵 $${amount_usd}\n📝 ${description}\n\nOpen Deals to accept.`,
       { parse_mode: "HTML" }
     );
   } catch (e) {

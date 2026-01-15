@@ -21,8 +21,6 @@ export async function shopQuantityHandle(ctx) {
   });
 }
 
-import { pool } from "../db.js";
-
 export async function shopConfirmHandle(ctx) {
   if (ctx.session?.step !== "shop_confirm") return;
 

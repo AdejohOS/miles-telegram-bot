@@ -54,12 +54,7 @@ import {
 } from "./commands/adminShopAdd.js";
 
 import { escrowMenu } from "./commands/escrow.js";
-import {
-  dealReceiver,
-  dealAmount,
-  dealCurrency,
-  dealDesc,
-} from "./commands/dealFlow.js";
+import { dealReceiver, dealAmount, dealDesc } from "./commands/dealFlow.js";
 
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -137,7 +132,16 @@ bot.action("deals", escrowMenu);
 
 bot.action("deal_create", async (ctx) => {
   ctx.session = { step: "deal_receiver" };
-  await ctx.editMessageText("Send receiver @username or Telegram ID:");
+
+  await ctx.editMessageText(
+    "👤 <b>Create Deal</b>\n\nSend receiver @username or Telegram ID:",
+    {
+      parse_mode: "HTML",
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Cancel", "escrow")],
+      ]).reply_markup,
+    }
+  );
 });
 
 bot.action(/deal_complete_(\d+)/, async (ctx) => {
@@ -147,40 +151,56 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
   try {
     await client.query("BEGIN");
 
-    const deal = await client.query(
-      `SELECT * FROM deals WHERE id=$1 AND status='accepted' FOR UPDATE`,
+    const res = await client.query(
+      `
+      SELECT sender_id, receiver_id, amount_usd
+      FROM deals
+      WHERE id = $1 AND status = 'accepted'
+      FOR UPDATE
+      `,
       [id]
     );
 
-    const { sender_id, receiver_id, currency, amount } = deal.rows[0];
+    if (!res.rows.length) throw new Error("Deal not valid");
 
-    // Unlock sender & pay receiver
+    const { sender_id, receiver_id, amount_usd } = res.rows[0];
+
+    // Deduct sender (locked → spent)
     await client.query(
-      `UPDATE user_balances
-       SET locked = locked - $1, balance = balance - $1
-       WHERE telegram_id=$2 AND currency=$3`,
-      [amount, sender_id, currency]
+      `
+      UPDATE user_balances
+      SET locked_usd = locked_usd - $1,
+          balance_usd = balance_usd - $1
+      WHERE telegram_id = $2
+      `,
+      [amount_usd, sender_id]
+    );
+
+    // Pay receiver
+    await client.query(
+      `
+      UPDATE user_balances
+      SET balance_usd = balance_usd + $1
+      WHERE telegram_id = $2
+      `,
+      [amount_usd, receiver_id]
     );
 
     await client.query(
-      `INSERT INTO user_balances (telegram_id, currency, balance)
-       VALUES ($1,$2,$3)
-       ON CONFLICT (telegram_id,currency)
-       DO UPDATE SET balance = user_balances.balance + $3`,
-      [receiver_id, currency, amount]
-    );
-
-    await client.query(
-      `UPDATE deals SET status='completed', completed_at=NOW() WHERE id=$1`,
+      `
+      UPDATE deals
+      SET status = 'completed', completed_at = NOW()
+      WHERE id = $1
+      `,
       [id]
     );
 
     await client.query("COMMIT");
 
-    ctx.editMessageText("💰 Deal completed. Receiver paid.");
-  } catch (e) {
+    await ctx.editMessageText("💰 Deal completed. Receiver paid.");
+  } catch (err) {
     await client.query("ROLLBACK");
-    ctx.reply("❌ Failed");
+    await ctx.reply("❌ Deal completion failed.");
   } finally {
     client.release();
   }
@@ -188,8 +208,13 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
 
 bot.action(/deal_accept_(\d+)/, async (ctx) => {
   const id = ctx.match[1];
-  await pool.query(`UPDATE deals SET status='accepted' WHERE id=$1`, [id]);
-  ctx.editMessageText("✅ Deal accepted.");
+
+  await pool.query(
+    `UPDATE deals SET status = 'accepted' WHERE id = $1 AND status = 'pending'`,
+    [id]
+  );
+
+  await ctx.editMessageText("✅ Deal accepted.");
 });
 
 bot.action("support", supportCommand);

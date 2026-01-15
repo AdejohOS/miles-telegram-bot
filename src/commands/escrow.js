@@ -1,26 +1,19 @@
 import { Markup } from "telegraf";
 
 export async function escrowMenu(ctx) {
-  await ctx.answerCbQuery();
+  await ctx.answerCbQuery?.().catch(() => {});
 
-  const text = "🤝 *Deals*\n\nSelect an action:";
-
-  await ctx.editMessageText(text, {
-    parse_mode: "Markdown",
-    ...Markup.inlineKeyboard([
+  await ctx.editMessageText("🤝 <b>Deals</b>\n\nSelect an action:", {
+    parse_mode: "HTML",
+    reply_markup: Markup.inlineKeyboard([
       [Markup.button.callback("➕ Make a Deal", "deal_create")],
-
       [Markup.button.callback("📦 Active Deals", "deal_active")],
-
       [
         Markup.button.callback("⏳ Awaiting", "deal_pending"),
         Markup.button.callback("✅ Completed", "deal_completed"),
-        ,
       ],
-
       [Markup.button.callback("⚖ Disputes", "deal_disputes")],
-
       [Markup.button.callback("⬅ Back to Main Menu", "main_menu")],
-    ]),
+    ]).reply_markup,
   });
 }

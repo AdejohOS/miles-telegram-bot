@@ -1,7 +1,9 @@
 import { pool } from "../db.js";
 
 export async function dealReceiver(ctx) {
-  const input = ctx.message.text;
+  if (ctx.session?.step !== "deal_receiver") return;
+
+  const input = ctx.message.text.trim();
 
   const res = input.startsWith("@")
     ? await pool.query(`SELECT telegram_id FROM users WHERE username = $1`, [
@@ -11,35 +13,35 @@ export async function dealReceiver(ctx) {
         input,
       ]);
 
-  if (!res.rows.length) return ctx.reply("User not found.");
+  if (!res.rows.length) {
+    return ctx.reply("❌ User not found.");
+  }
 
   ctx.session.receiverId = res.rows[0].telegram_id;
   ctx.session.step = "deal_amount";
 
-  ctx.reply("Enter amount:");
+  await ctx.reply("💵 Enter deal amount in USD:");
 }
 
 export async function dealAmount(ctx) {
+  if (ctx.session?.step !== "deal_amount") return;
+
   const amount = Number(ctx.message.text);
-  if (!amount || amount <= 0) return ctx.reply("Invalid amount");
+  if (!amount || amount <= 0) {
+    return ctx.reply("❌ Invalid amount.");
+  }
 
-  ctx.session.amount = amount;
-  ctx.session.step = "deal_currency";
-  ctx.reply("Currency: BTC or USDT?");
-}
-
-export async function dealCurrency(ctx) {
-  const cur = ctx.message.text.toUpperCase();
-  if (!["BTC", "USDT"].includes(cur)) return ctx.reply("Use BTC or USDT");
-
-  ctx.session.currency = cur;
+  ctx.session.amountUsd = amount;
   ctx.session.step = "deal_desc";
-  ctx.reply("Describe the deal:");
+
+  await ctx.reply("📝 Describe the deal:");
 }
 
 export async function dealDesc(ctx) {
-  const desc = ctx.message.text;
-  const { receiverId, amount, currency } = ctx.session;
+  if (ctx.session?.step !== "deal_desc") return;
+
+  const description = ctx.message.text;
+  const { receiverId, amountUsd } = ctx.session;
   const senderId = ctx.from.id;
 
   const client = await pool.connect();
@@ -47,46 +49,62 @@ export async function dealDesc(ctx) {
   try {
     await client.query("BEGIN");
 
-    const bal = await client.query(
-      `SELECT balance, locked FROM user_balances
-       WHERE telegram_id=$1 AND currency=$2
-       FOR UPDATE`,
-      [senderId, currency]
+    const balRes = await client.query(
+      `
+      SELECT balance_usd, locked_usd
+      FROM user_balances
+      WHERE telegram_id = $1
+      FOR UPDATE
+      `,
+      [senderId]
     );
 
-    if (!bal.rows.length) {
-      throw new Error("You have no balance in this currency");
+    if (!balRes.rows.length) {
+      throw new Error("No balance found");
     }
 
-    const available = bal.rows[0].balance - bal.rows[0].locked;
-    if (amount > available) throw new Error("Insufficient funds");
+    const available =
+      Number(balRes.rows[0].balance_usd) - Number(balRes.rows[0].locked_usd);
 
+    if (amountUsd > available) {
+      throw new Error("Insufficient available balance");
+    }
+
+    // 🔒 Lock funds
     await client.query(
-      `UPDATE user_balances
-       SET locked = locked + $1
-       WHERE telegram_id=$2 AND currency=$3`,
-      [amount, senderId, currency]
+      `
+      UPDATE user_balances
+      SET locked_usd = locked_usd + $1
+      WHERE telegram_id = $2
+      `,
+      [amountUsd, senderId]
     );
 
-    const deal = await client.query(
-      `INSERT INTO deals (sender_id, receiver_id, currency, amount, description)
-       VALUES ($1,$2,$3,$4,$5) RETURNING id`,
-      [senderId, receiverId, currency, amount, desc]
+    const dealRes = await client.query(
+      `
+      INSERT INTO deals (sender_id, receiver_id, amount_usd, description)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id
+      `,
+      [senderId, receiverId, amountUsd, description]
     );
 
     await client.query("COMMIT");
 
     ctx.session = null;
 
-    ctx.reply(`🤝 Deal #${deal.rows[0].id} created and awaiting acceptance.`);
-
-    ctx.telegram.sendMessage(
-      receiverId,
-      `📨 You have a new deal request\nAmount: ${amount} ${currency}\n${desc}\n\nAccept or reject in Deals`
+    await ctx.reply(
+      `🤝 Deal #${dealRes.rows[0].id} created.\n\nAmount: $${amountUsd}\nStatus: Awaiting acceptance.`
     );
-  } catch (e) {
+
+    await ctx.telegram.sendMessage(
+      receiverId,
+      `📨 <b>New Deal Request</b>\n\nAmount: <b>$${amountUsd}</b>\n${description}\n\nGo to Deals to accept.`,
+      { parse_mode: "HTML" }
+    );
+  } catch (err) {
     await client.query("ROLLBACK");
-    ctx.reply("❌ " + e.message);
+    await ctx.reply("❌ " + err.message);
   } finally {
     client.release();
   }

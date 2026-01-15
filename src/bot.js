@@ -47,6 +47,8 @@ import { shopSearchHandle } from "./commands/shopSearchHandle.js";
 
 import { adminDebit } from "./commands/adminDebit.js";
 
+import { adminStats } from "./commands/adminStats.js";
+
 import {
   addItemTitle,
   addItemPrice,
@@ -484,6 +486,8 @@ bot.action("main_menu", startCommand);
 
 // ADMIN COMMANDS
 bot.action("admin_menu", adminOnly, adminMenu);
+
+bot.action("admin_stats", adminOnly, adminStats);
 
 bot.action("admin_shop_menu", adminOnly, adminShopMenu);
 bot.action("admin_add_item", adminOnly, async (ctx) => {

@@ -269,6 +269,7 @@ bot.action("deal_pending", async (ctx) => {
     if (Number(d.receiver_id) === viewerId) {
       buttons.push([
         Markup.button.callback(`✅ Accept #${d.id}`, `deal_accept_${d.id}`),
+        Markup.button.callback(`❌ Reject #${d.id}`, `deal_reject_${d.id}`),
       ]);
     }
   }
@@ -376,6 +377,79 @@ bot.action("deal_completed", async (ctx) => {
       [Markup.button.callback("⬅ Back", "deals")],
     ]).reply_markup,
   });
+});
+bot.action(/deal_reject_(\d+)/, async (ctx) => {
+  const dealId = Number(ctx.match[1]);
+  const receiverId = Number(ctx.from.id);
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Lock deal
+    const res = await client.query(
+      `
+      SELECT sender_id, amount_usd
+      FROM deals
+      WHERE id = $1
+        AND receiver_id = $2
+        AND status = 'pending'
+      FOR UPDATE
+      `,
+      [dealId, receiverId]
+    );
+
+    if (!res.rows.length) {
+      throw new Error("Deal not found or not allowed");
+    }
+
+    const { sender_id, amount_usd } = res.rows[0];
+
+    // 🔓 Unlock sender funds
+    await client.query(
+      `
+      UPDATE user_balances
+      SET locked_usd = locked_usd - $1
+      WHERE telegram_id = $2
+      `,
+      [amount_usd, sender_id]
+    );
+
+    // ❌ Reject deal
+    await client.query(
+      `
+      UPDATE deals
+      SET status = 'rejected'
+      WHERE id = $1
+      `,
+      [dealId]
+    );
+
+    await client.query("COMMIT");
+
+    // UI feedback
+    await ctx.editMessageText(
+      "❌ Deal rejected.\n\nLocked funds returned to sender.",
+      {
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback("⬅ Back to Deals", "deals")],
+        ]).reply_markup,
+      }
+    );
+
+    // 🔔 Notify sender
+    await ctx.telegram.sendMessage(
+      sender_id,
+      `❌ <b>Deal Rejected</b>\n\nDeal #${dealId} was rejected.\nYour funds have been unlocked.`,
+      { parse_mode: "HTML" }
+    );
+  } catch (err) {
+    await client.query("ROLLBACK");
+    await ctx.answerCbQuery("❌ Unable to reject deal.");
+  } finally {
+    client.release();
+  }
 });
 
 bot.action("support", supportCommand);

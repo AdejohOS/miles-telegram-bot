@@ -217,6 +217,157 @@ bot.action(/deal_accept_(\d+)/, async (ctx) => {
   await ctx.editMessageText("✅ Deal accepted.");
 });
 
+bot.action("deal_pending", async (ctx) => {
+  const telegramId = ctx.from.id;
+
+  const res = await pool.query(
+    `
+    SELECT id, sender_id, receiver_id, amount_usd, description
+    FROM deals
+    WHERE status = 'pending'
+      AND (sender_id = $1 OR receiver_id = $1)
+    ORDER BY created_at DESC
+    `,
+    [telegramId]
+  );
+
+  if (!res.rows.length) {
+    return ctx.editMessageText("⏳ <b>Pending Deals</b>\n\nNo pending deals.", {
+      parse_mode: "HTML",
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Back", "escrow")],
+      ]).reply_markup,
+    });
+  }
+
+  const text =
+    "⏳ <b>Pending Deals</b>\n\n" +
+    res.rows
+      .map((d) => {
+        const role = d.sender_id === telegramId ? "You sent" : "You received";
+        return (
+          `<b>#${d.id}</b>\n` +
+          `${role}\n` +
+          `💵 $${d.amount_usd}\n` +
+          `📝 ${d.description}`
+        );
+      })
+      .join("\n\n");
+
+  const buttons = res.rows
+    .filter((d) => d.receiver_id === telegramId)
+    .map((d) => [
+      Markup.button.callback(`✅ Accept #${d.id}`, `deal_accept_${d.id}`),
+    ]);
+
+  buttons.push([Markup.button.callback("⬅ Back", "escrow")]);
+
+  await ctx.editMessageText(text, {
+    parse_mode: "HTML",
+    reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
+  });
+});
+bot.action("deal_active", async (ctx) => {
+  const telegramId = ctx.from.id;
+
+  const res = await pool.query(
+    `
+    SELECT id, sender_id, receiver_id, amount_usd, description
+    FROM deals
+    WHERE status = 'accepted'
+      AND (sender_id = $1 OR receiver_id = $1)
+    ORDER BY created_at DESC
+    `,
+    [telegramId]
+  );
+
+  if (!res.rows.length) {
+    return ctx.editMessageText("📦 <b>Active Deals</b>\n\nNo active deals.", {
+      parse_mode: "HTML",
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Back", "escrow")],
+      ]).reply_markup,
+    });
+  }
+
+  const text =
+    "📦 <b>Active Deals</b>\n\n" +
+    res.rows
+      .map((d) => {
+        const role = d.sender_id === telegramId ? "You sent" : "You received";
+        return (
+          `<b>#${d.id}</b>\n` +
+          `${role}\n` +
+          `💵 $${d.amount_usd}\n` +
+          `📝 ${d.description}`
+        );
+      })
+      .join("\n\n");
+
+  const buttons = res.rows
+    .filter((d) => d.sender_id === telegramId)
+    .map((d) => [
+      Markup.button.callback(`💰 Complete #${d.id}`, `deal_complete_${d.id}`),
+    ]);
+
+  buttons.push([Markup.button.callback("⬅ Back", "escrow")]);
+
+  await ctx.editMessageText(text, {
+    parse_mode: "HTML",
+    reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
+  });
+});
+bot.action("deal_completed", async (ctx) => {
+  const telegramId = ctx.from.id;
+
+  const res = await pool.query(
+    `
+    SELECT id, sender_id, receiver_id, amount_usd, description, completed_at
+    FROM deals
+    WHERE status = 'completed'
+      AND (sender_id = $1 OR receiver_id = $1)
+    ORDER BY completed_at DESC
+    LIMIT 20
+    `,
+    [telegramId]
+  );
+
+  if (!res.rows.length) {
+    return ctx.editMessageText(
+      "✅ <b>Completed Deals</b>\n\nNo completed deals.",
+      {
+        parse_mode: "HTML",
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback("⬅ Back", "escrow")],
+        ]).reply_markup,
+      }
+    );
+  }
+
+  const text =
+    "✅ <b>Completed Deals</b>\n\n" +
+    res.rows
+      .map((d) => {
+        const role = d.sender_id === telegramId ? "You paid" : "You received";
+        const date = new Date(d.completed_at).toLocaleDateString();
+        return (
+          `<b>#${d.id}</b>\n` +
+          `${role}\n` +
+          `💵 $${d.amount_usd}\n` +
+          `📝 ${d.description}\n` +
+          `📅 ${date}`
+        );
+      })
+      .join("\n\n");
+
+  await ctx.editMessageText(text, {
+    parse_mode: "HTML",
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback("⬅ Back", "escrow")],
+    ]).reply_markup,
+  });
+});
+
 bot.action("support", supportCommand);
 
 bot.action("profile_transactions", profileTransactions);

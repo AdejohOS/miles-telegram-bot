@@ -304,6 +304,14 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
   const rating = Number(ctx.match[2]);
   const userId = Number(ctx.from.id);
 
+  // Always answer callback first (prevents Telegram freeze)
+  await ctx.answerCbQuery();
+
+  // Validate rating range
+  if (rating < 1 || rating > 5) {
+    return ctx.answerCbQuery("Invalid rating", { show_alert: true });
+  }
+
   const client = await pool.connect();
 
   try {
@@ -311,22 +319,42 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
 
     const res = await client.query(
       `
-      SELECT sender_id, receiver_id,
+      SELECT sender_id, receiver_id, status,
              sender_rated, receiver_rated
       FROM deals
-      WHERE id = $1 AND status = 'completed'
+      WHERE id = $1
       FOR UPDATE
       `,
       [dealId]
     );
 
-    if (!res.rows.length) throw new Error("Deal not found");
+    if (!res.rows.length) {
+      throw new Error("Deal not found");
+    }
 
     const deal = res.rows[0];
 
-    // ✅ Sender rating receiver
-    if (userId === deal.sender_id) {
-      if (deal.sender_rated) throw new Error("You already rated");
+    if (deal.status !== "completed") {
+      throw new Error("Deal not completed");
+    }
+
+    const senderId = Number(deal.sender_id);
+    const receiverId = Number(deal.receiver_id);
+
+    // ==========================
+    // PARTICIPANT CHECK
+    // ==========================
+    if (userId !== senderId && userId !== receiverId) {
+      throw new Error("You are not part of this deal");
+    }
+
+    // ==========================
+    // SENDER → RATE RECEIVER
+    // ==========================
+    if (userId === senderId) {
+      if (deal.sender_rated) {
+        throw new Error("You already rated this deal");
+      }
 
       await client.query(
         `
@@ -339,9 +367,13 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
       );
     }
 
-    // ✅ Receiver rating sender
-    else if (userId === deal.receiver_id) {
-      if (deal.receiver_rated) throw new Error("You already rated");
+    // ==========================
+    // RECEIVER → RATE SENDER
+    // ==========================
+    if (userId === receiverId) {
+      if (deal.receiver_rated) {
+        throw new Error("You already rated this deal");
+      }
 
       await client.query(
         `
@@ -352,21 +384,25 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
         `,
         [rating, dealId]
       );
-    } else {
-      throw new Error("You are not part of this deal");
     }
 
     await client.query("COMMIT");
 
-    await ctx.editMessageText(`⭐ Thanks! You rated this deal *${rating}/5*.`, {
-      parse_mode: "Markdown",
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Back to Deals", "deals")],
-      ]).reply_markup,
-    });
+    await ctx.editMessageText(
+      `⭐ Thank you!\n\nYou rated this deal *${rating}/5*.`,
+      {
+        parse_mode: "Markdown",
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback("⬅ Back to Deals", "deals")],
+        ]).reply_markup,
+      }
+    );
   } catch (err) {
     await client.query("ROLLBACK");
-    await ctx.answerCbQuery(err.message, { show_alert: true });
+
+    await ctx.answerCbQuery(err.message, {
+      show_alert: true,
+    });
   } finally {
     client.release();
   }

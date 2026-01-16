@@ -37,6 +37,29 @@ export async function profileCommand(ctx) {
   const purchases = Number(dealsRes.rows[0].purchases);
   const purchaseAmount = Number(dealsRes.rows[0].purchase_amount);
 
+  const ratingRes = await pool.query(
+    `
+  SELECT
+    ROUND(AVG(r)::numeric, 2) AS avg_rating,
+    COUNT(*) AS total_ratings
+  FROM (
+    SELECT sender_rating AS r
+    FROM deals
+    WHERE receiver_id = $1 AND sender_rated = true
+
+    UNION ALL
+
+    SELECT receiver_rating
+    FROM deals
+    WHERE sender_id = $1 AND receiver_rated = true
+  ) ratings
+  `,
+    [telegramId]
+  );
+
+  const avgRating = ratingRes.rows[0]?.avg_rating ?? "N/A";
+  const totalRatings = ratingRes.rows[0]?.total_ratings ?? 0;
+
   const balance = balRes.rows[0]?.balance_usd ?? 0;
   const locked = balRes.rows[0]?.locked_usd ?? 0;
   const available = balance - locked;
@@ -57,7 +80,8 @@ export async function profileCommand(ctx) {
     `<b>📊 Trading Stats</b>\n` +
     `Purchases: ${purchases}pcs\n` +
     `Purchase amount: $${formatBalance(purchaseAmount)}\n` +
-    `Ratings: 0.0/5.0\n`;
+    `Ratings: ${avgRating}/5.0\n` +
+    `Ratings: ${totalRatings}`;
 
   const keyboard = Markup.inlineKeyboard([
     [Markup.button.callback("📜 Transactions", "profile_transactions")],

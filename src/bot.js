@@ -283,6 +283,24 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
 
     await client.query("COMMIT");
 
+    await ctx.editMessageText(
+      "💰 Deal completed. Receiver paid.\n\n⭐ Please rate your experience:",
+      {
+        reply_markup: Markup.inlineKeyboard([
+          [
+            Markup.button.callback("⭐ 1", `rate_${id}_1`),
+            Markup.button.callback("⭐ 2", `rate_${id}_2`),
+            Markup.button.callback("⭐ 3", `rate_${id}_3`),
+          ],
+          [
+            Markup.button.callback("⭐ 4", `rate_${id}_4`),
+            Markup.button.callback("⭐ 5", `rate_${id}_5`),
+          ],
+          [Markup.button.callback("⬅ Back to Deals", "deals")],
+        ]).reply_markup,
+      }
+    );
+
     await ctx.editMessageText("💰 Deal completed. Receiver paid.", {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback("⬅ Back to Deals", "deals")],
@@ -292,6 +310,88 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
     await client.query("ROLLBACK");
     console.error("Deal completion failed:", e);
     await ctx.reply("❌ Deal completion failed.");
+  } finally {
+    client.release();
+  }
+});
+bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
+  const dealId = Number(ctx.match[1]);
+  const rating = Number(ctx.match[2]);
+  const userId = ctx.from.id;
+
+  if (rating < 1 || rating > 5) {
+    return ctx.answerCbQuery("Invalid rating.");
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const res = await client.query(
+      `
+      SELECT sender_id, receiver_id, status,
+             sender_rated, receiver_rated
+      FROM deals
+      WHERE id = $1
+      FOR UPDATE
+      `,
+      [dealId]
+    );
+
+    if (!res.rows.length) throw new Error("Deal not found");
+
+    const deal = res.rows[0];
+
+    if (deal.status !== "completed") {
+      throw new Error("Deal not completed");
+    }
+
+    // 🧠 Determine role
+    let updateQuery;
+
+    if (userId === deal.sender_id) {
+      if (deal.sender_rated) {
+        throw new Error("You already rated this deal");
+      }
+
+      updateQuery = `
+        UPDATE deals
+        SET sender_rating = $1,
+            sender_rated = true
+        WHERE id = $2
+      `;
+    } else if (userId === deal.receiver_id) {
+      if (deal.receiver_rated) {
+        throw new Error("You already rated this deal");
+      }
+
+      updateQuery = `
+        UPDATE deals
+        SET receiver_rating = $1,
+            receiver_rated = true
+        WHERE id = $2
+      `;
+    } else {
+      throw new Error("Not a participant in this deal");
+    }
+
+    await client.query(updateQuery, [rating, dealId]);
+
+    await client.query("COMMIT");
+
+    await ctx.editMessageText(
+      `⭐ Thank you! You rated this deal *${rating}/5*.`,
+      {
+        parse_mode: "Markdown",
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback("⬅ Back to Deals", "deals")],
+        ]).reply_markup,
+      }
+    );
+  } catch (err) {
+    await client.query("ROLLBACK");
+    await ctx.answerCbQuery(err.message, { show_alert: true });
   } finally {
     client.release();
   }

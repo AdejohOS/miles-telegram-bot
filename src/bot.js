@@ -221,19 +221,16 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
        MOVE MONEY
     =============================== */
 
-    // 🔒 Unlock + deduct sender
     await client.query(
       `
       UPDATE user_balances
-      SET
-        locked_usd  = locked_usd - $1,
-        balance_usd = balance_usd - $1
+      SET locked_usd = locked_usd - $1,
+          balance_usd = balance_usd - $1
       WHERE telegram_id = $2
       `,
       [amount_usd, sender_id]
     );
 
-    // 💰 Pay receiver
     await client.query(
       `
       UPDATE user_balances
@@ -244,10 +241,9 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
     );
 
     /* ===============================
-       LOG TRANSACTIONS (🔥 IMPORTANT)
+       LOG TRANSACTIONS
     =============================== */
 
-    // Sender → DEBIT
     await client.query(
       `
       INSERT INTO transactions
@@ -257,7 +253,6 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
       [sender_id, amount_usd, `deal:${id}`]
     );
 
-    // Receiver → CREDIT
     await client.query(
       `
       INSERT INTO transactions
@@ -283,6 +278,7 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
 
     await client.query("COMMIT");
 
+    // ⭐ SINGLE EDIT — THIS IS IMPORTANT
     await ctx.editMessageText(
       "💰 Deal completed. Receiver paid.\n\n⭐ Please rate your experience:",
       {
@@ -300,12 +296,6 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
         ]).reply_markup,
       }
     );
-
-    await ctx.editMessageText("💰 Deal completed. Receiver paid.", {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Back to Deals", "deals")],
-      ]).reply_markup,
-    });
   } catch (e) {
     await client.query("ROLLBACK");
     console.error("Deal completion failed:", e);
@@ -314,6 +304,7 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
     client.release();
   }
 });
+
 bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
   const dealId = Number(ctx.match[1]);
   const rating = Number(ctx.match[2]);

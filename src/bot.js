@@ -147,7 +147,7 @@ bot.action("deal_create", async (ctx) => {
 
 bot.action(/deal_accept_(\d+)/, async (ctx) => {
   const dealId = Number(ctx.match[1]);
-  const receiverId = ctx.from.id;
+  const receiverId = Number(ctx.from.id);
 
   const res = await pool.query(
     `
@@ -156,30 +156,41 @@ bot.action(/deal_accept_(\d+)/, async (ctx) => {
     WHERE id = $1
       AND receiver_id = $2
       AND status = 'pending'
-    RETURNING sender_id
+    RETURNING sender_id, amount_usd, description
     `,
     [dealId, receiverId]
   );
 
   if (!res.rows.length) {
-    return ctx.answerCbQuery("❌ Deal not available.");
+    return ctx.answerCbQuery("❌ You cannot accept this deal.");
   }
 
-  await ctx.editMessageText(
-    "✅ <b>Deal accepted</b>\n\nWaiting for sender to complete.",
+  const { sender_id, amount_usd, description } = res.rows[0];
+
+  // 🔔 Notify sender
+  await ctx.telegram.sendMessage(
+    sender_id,
+    `✅ <b>Deal Accepted</b>\n\n` +
+      `💵 Amount: <b>$${amount_usd}</b>\n` +
+      `📝 ${description}\n\n` +
+      `You can now complete the deal when ready.`,
     {
       parse_mode: "HTML",
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⬅ Back to Deals", "deals")],
+        [Markup.button.callback("💰 Complete Deal", `deal_complete_${dealId}`)],
+        [Markup.button.callback("📦 View Deals", "deals")],
       ]).reply_markup,
     }
   );
 
-  // 🔔 Notify sender
-  await ctx.telegram.sendMessage(
-    res.rows[0].sender_id,
-    `✅ <b>Your deal #${dealId} was accepted</b>\n\nYou can now complete it from Deals.`,
-    { parse_mode: "HTML" }
+  // ✅ Update receiver UI
+  await ctx.editMessageText(
+    "✅ Deal accepted.\n\nWaiting for sender to complete.",
+    {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Back to Deals", "deals")],
+      ]).reply_markup,
+    }
   );
 });
 
@@ -443,7 +454,7 @@ bot.action("deal_completed", async (ctx) => {
 });
 bot.action(/deal_reject_(\d+)/, async (ctx) => {
   const dealId = Number(ctx.match[1]);
-  const receiverId = ctx.from.id;
+  const receiverId = Number(ctx.from.id);
 
   const client = await pool.connect();
 
@@ -452,7 +463,7 @@ bot.action(/deal_reject_(\d+)/, async (ctx) => {
 
     const res = await client.query(
       `
-      SELECT sender_id, amount_usd
+      SELECT sender_id, amount_usd, description
       FROM deals
       WHERE id = $1
         AND receiver_id = $2
@@ -463,10 +474,10 @@ bot.action(/deal_reject_(\d+)/, async (ctx) => {
     );
 
     if (!res.rows.length) {
-      throw new Error("Deal not found or already handled");
+      throw new Error("Deal not found or cannot be rejected");
     }
 
-    const { sender_id, amount_usd } = res.rows[0];
+    const { sender_id, amount_usd, description } = res.rows[0];
 
     // 🔓 Unlock sender funds
     await client.query(
@@ -478,6 +489,7 @@ bot.action(/deal_reject_(\d+)/, async (ctx) => {
       [amount_usd, sender_id]
     );
 
+    // ❌ Mark deal rejected
     await client.query(
       `
       UPDATE deals
@@ -489,25 +501,33 @@ bot.action(/deal_reject_(\d+)/, async (ctx) => {
 
     await client.query("COMMIT");
 
-    await ctx.editMessageText(
-      "❌ <b>Deal rejected</b>\n\nFunds have been returned to the sender.",
+    // 🔔 Notify sender
+    await ctx.telegram.sendMessage(
+      sender_id,
+      `❌ <b>Deal Rejected</b>\n\n` +
+        `💵 Amount: <b>$${amount_usd}</b>\n` +
+        `📝 ${description}\n\n` +
+        `Your locked funds have been released.`,
       {
         parse_mode: "HTML",
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback("➕ Create New Deal", "deal_create")],
+          [Markup.button.callback("📦 View Deals", "deals")],
+        ]).reply_markup,
+      }
+    );
+
+    await ctx.editMessageText(
+      "❌ Deal rejected.\n\nFunds have been returned to the sender.",
+      {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback("⬅ Back to Deals", "deals")],
         ]).reply_markup,
       }
     );
-
-    // 🔔 Notify sender
-    await ctx.telegram.sendMessage(
-      sender_id,
-      `❌ <b>Your deal #${dealId} was rejected</b>\n\nYour funds have been unlocked.`,
-      { parse_mode: "HTML" }
-    );
   } catch (err) {
     await client.query("ROLLBACK");
-    await ctx.answerCbQuery("❌ Failed to reject deal.");
+    await ctx.reply("❌ Failed to reject deal.");
   } finally {
     client.release();
   }

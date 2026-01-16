@@ -22,6 +22,21 @@ export async function profileCommand(ctx) {
     [telegramId]
   );
 
+  const dealsRes = await pool.query(
+    `
+  SELECT
+    COUNT(*) AS purchases,
+    COALESCE(SUM(amount_usd), 0) AS purchase_amount
+  FROM deals
+  WHERE receiver_id = $1
+    AND status = 'completed'
+  `,
+    [telegramId]
+  );
+
+  const purchases = Number(dealsRes.rows[0].purchases);
+  const purchaseAmount = Number(dealsRes.rows[0].purchase_amount);
+
   const balance = balRes.rows[0]?.balance_usd ?? 0;
   const locked = balRes.rows[0]?.locked_usd ?? 0;
   const available = balance - locked;
@@ -39,8 +54,9 @@ export async function profileCommand(ctx) {
     `Available: $${formatBalance(available)}\n` +
     `Locked: $${formatBalance(locked)}\n` +
     `Total: $${formatBalance(balance)}\n\n` +
-    `Purchases: 0pcs\n` +
-    `Purchase amount: $0.00\n` +
+    `<b>📊 Trading Stats</b>\n` +
+    `Purchases: ${purchases}pcs\n` +
+    `Purchase amount: $${formatBalance(purchaseAmount)}\n` +
     `Ratings: 0.0/5.0\n`;
 
   const keyboard = Markup.inlineKeyboard([

@@ -90,8 +90,26 @@ export async function dealDesc(ctx) {
 
     await ctx.telegram.sendMessage(
       receiverId,
-      `📨 <b>New Deal Request</b>\n\n💵 $${amount_usd}\n📝 ${description}\n\nOpen Deals to accept.`,
-      { parse_mode: "HTML" }
+      `📨 <b>New Deal Request</b>\n\n` +
+        `💵 <b>$${amount_usd}</b>\n` +
+        `📝 ${description}\n\n` +
+        `Do you want to accept this deal?`,
+      {
+        parse_mode: "HTML",
+        reply_markup: Markup.inlineKeyboard([
+          [
+            Markup.button.callback(
+              "✅ Accept Deal",
+              `deal_accept_${deal.rows[0].id}`
+            ),
+            Markup.button.callback(
+              "❌ Reject Deal",
+              `deal_reject_${deal.rows[0].id}`
+            ),
+          ],
+          [Markup.button.callback("📦 View All Deals", "deals")],
+        ]),
+      }
     );
   } catch (e) {
     await client.query("ROLLBACK");

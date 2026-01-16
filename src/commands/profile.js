@@ -57,7 +57,7 @@ export async function profileCommand(ctx) {
     [telegramId]
   );
 
-  const avgRating = ratingRes.rows[0]?.avg_rating ?? "-";
+  const avgRating = ratingRes.rows[0]?.avg_rating ?? "N";
   const totalRatings = ratingRes.rows[0]?.total_ratings ?? 0;
 
   const balance = balRes.rows[0]?.balance_usd ?? 0;

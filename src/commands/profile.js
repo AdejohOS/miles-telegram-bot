@@ -38,7 +38,10 @@ export async function profileCommand(ctx) {
     `💰 <b>Wallet (USD)</b>\n` +
     `Available: $${formatBalance(available)}\n` +
     `Locked: $${formatBalance(locked)}\n` +
-    `Total: $${formatBalance(balance)}`;
+    `Total: $${formatBalance(balance)}\n\n` +
+    `Purchases: 0pcs\n`; // Placeholder for future purchase count
+  `Purchase amount: $0.00\n`; // Placeholder for future purchase amount
+  `Ratings:0.0/5.0`; // Placeholder for future ratings
 
   const keyboard = Markup.inlineKeyboard([
     [Markup.button.callback("📜 Transactions", "profile_transactions")],

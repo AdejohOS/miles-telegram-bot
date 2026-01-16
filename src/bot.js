@@ -61,10 +61,6 @@ import { dealReceiver, dealAmount, dealDesc } from "./commands/dealFlow.js";
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-bot.on("callback_query", (ctx) => {
-  console.log("CALLBACK RECEIVED:", ctx.callbackQuery.data);
-});
-
 bot.use(session());
 
 // START
@@ -308,8 +304,6 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
   const rating = Number(ctx.match[2]);
   const userId = ctx.from.id;
 
-  await ctx.answerCbQuery(); // ⬅ VERY IMPORTANT (prevents silent fail)
-
   const client = await pool.connect();
 
   try {
@@ -329,37 +323,25 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
     if (!res.rows.length) throw new Error("Deal not found");
 
     const deal = res.rows[0];
-
-    if (deal.status !== "completed") {
-      throw new Error("Deal not completed");
-    }
+    if (deal.status !== "completed") throw new Error("Deal not completed");
 
     let updateQuery;
 
     if (userId === deal.sender_id) {
       if (deal.sender_rated) throw new Error("Already rated");
-
       updateQuery = `
-        UPDATE deals
-        SET sender_rating = $1,
-            sender_rated = true
-        WHERE id = $2
+        UPDATE deals SET sender_rating=$1, sender_rated=true WHERE id=$2
       `;
     } else if (userId === deal.receiver_id) {
       if (deal.receiver_rated) throw new Error("Already rated");
-
       updateQuery = `
-        UPDATE deals
-        SET receiver_rating = $1,
-            receiver_rated = true
-        WHERE id = $2
+        UPDATE deals SET receiver_rating=$1, receiver_rated=true WHERE id=$2
       `;
     } else {
       throw new Error("Not a participant");
     }
 
     await client.query(updateQuery, [rating, dealId]);
-
     await client.query("COMMIT");
 
     await ctx.editMessageText(
@@ -373,7 +355,7 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
     );
   } catch (err) {
     await client.query("ROLLBACK");
-    await ctx.answerCbQuery(err.message, { show_alert: true });
+    await ctx.reply("❌ " + err.message);
   } finally {
     client.release();
   }

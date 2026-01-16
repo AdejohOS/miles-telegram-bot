@@ -302,7 +302,7 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
 bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
   const dealId = Number(ctx.match[1]);
   const rating = Number(ctx.match[2]);
-  const userId = ctx.from.id;
+  const userId = Number(ctx.from.id);
 
   const client = await pool.connect();
 
@@ -311,10 +311,10 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
 
     const res = await client.query(
       `
-      SELECT sender_id, receiver_id, status,
+      SELECT sender_id, receiver_id,
              sender_rated, receiver_rated
       FROM deals
-      WHERE id = $1
+      WHERE id = $1 AND status = 'completed'
       FOR UPDATE
       `,
       [dealId]
@@ -323,39 +323,50 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
     if (!res.rows.length) throw new Error("Deal not found");
 
     const deal = res.rows[0];
-    if (deal.status !== "completed") throw new Error("Deal not completed");
 
-    let updateQuery;
-
+    // ✅ Sender rating receiver
     if (userId === deal.sender_id) {
-      if (deal.sender_rated) throw new Error("Already rated");
-      updateQuery = `
-        UPDATE deals SET sender_rating=$1, sender_rated=true WHERE id=$2
-      `;
-    } else if (userId === deal.receiver_id) {
-      if (deal.receiver_rated) throw new Error("Already rated");
-      updateQuery = `
-        UPDATE deals SET receiver_rating=$1, receiver_rated=true WHERE id=$2
-      `;
-    } else {
-      throw new Error("Not a participant");
+      if (deal.sender_rated) throw new Error("You already rated");
+
+      await client.query(
+        `
+        UPDATE deals
+        SET sender_rating = $1,
+            sender_rated = true
+        WHERE id = $2
+        `,
+        [rating, dealId]
+      );
     }
 
-    await client.query(updateQuery, [rating, dealId]);
+    // ✅ Receiver rating sender
+    else if (userId === deal.receiver_id) {
+      if (deal.receiver_rated) throw new Error("You already rated");
+
+      await client.query(
+        `
+        UPDATE deals
+        SET receiver_rating = $1,
+            receiver_rated = true
+        WHERE id = $2
+        `,
+        [rating, dealId]
+      );
+    } else {
+      throw new Error("You are not part of this deal");
+    }
+
     await client.query("COMMIT");
 
-    await ctx.editMessageText(
-      `⭐ Thank you! You rated this deal *${rating}/5*.`,
-      {
-        parse_mode: "Markdown",
-        reply_markup: Markup.inlineKeyboard([
-          [Markup.button.callback("⬅ Back to Deals", "deals")],
-        ]).reply_markup,
-      }
-    );
+    await ctx.editMessageText(`⭐ Thanks! You rated this deal *${rating}/5*.`, {
+      parse_mode: "Markdown",
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Back to Deals", "deals")],
+      ]).reply_markup,
+    });
   } catch (err) {
     await client.query("ROLLBACK");
-    await ctx.reply("❌ " + err.message);
+    await ctx.answerCbQuery(err.message, { show_alert: true });
   } finally {
     client.release();
   }

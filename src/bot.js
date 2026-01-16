@@ -61,6 +61,10 @@ import { dealReceiver, dealAmount, dealDesc } from "./commands/dealFlow.js";
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
+bot.on("callback_query", (ctx) => {
+  console.log("CALLBACK RECEIVED:", ctx.callbackQuery.data);
+});
+
 bot.use(session());
 
 // START

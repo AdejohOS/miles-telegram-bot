@@ -62,12 +62,6 @@ dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 bot.use(session());
-bot.use(async (ctx, next) => {
-  if (ctx.callbackQuery) {
-    await ctx.answerCbQuery().catch(() => {});
-  }
-  return next();
-});
 
 // START
 bot.start(startCommand);

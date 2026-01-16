@@ -310,9 +310,7 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
   const rating = Number(ctx.match[2]);
   const userId = ctx.from.id;
 
-  if (rating < 1 || rating > 5) {
-    return ctx.answerCbQuery("Invalid rating.");
-  }
+  await ctx.answerCbQuery(); // ⬅ VERY IMPORTANT (prevents silent fail)
 
   const client = await pool.connect();
 
@@ -338,13 +336,10 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
       throw new Error("Deal not completed");
     }
 
-    // 🧠 Determine role
     let updateQuery;
 
     if (userId === deal.sender_id) {
-      if (deal.sender_rated) {
-        throw new Error("You already rated this deal");
-      }
+      if (deal.sender_rated) throw new Error("Already rated");
 
       updateQuery = `
         UPDATE deals
@@ -353,9 +348,7 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
         WHERE id = $2
       `;
     } else if (userId === deal.receiver_id) {
-      if (deal.receiver_rated) {
-        throw new Error("You already rated this deal");
-      }
+      if (deal.receiver_rated) throw new Error("Already rated");
 
       updateQuery = `
         UPDATE deals
@@ -364,7 +357,7 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
         WHERE id = $2
       `;
     } else {
-      throw new Error("Not a participant in this deal");
+      throw new Error("Not a participant");
     }
 
     await client.query(updateQuery, [rating, dealId]);

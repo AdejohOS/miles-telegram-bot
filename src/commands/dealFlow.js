@@ -108,7 +108,7 @@ export async function dealDesc(ctx) {
             ),
           ],
           [Markup.button.callback("📦 View All Deals", "deals")],
-        ]),
+        ]).reply_markup,
       }
     );
   } catch (e) {

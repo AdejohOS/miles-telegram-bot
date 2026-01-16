@@ -146,8 +146,8 @@ bot.action("deal_create", async (ctx) => {
 });
 
 bot.action(/deal_accept_(\d+)/, async (ctx) => {
-  const dealId = ctx.match[1];
-  const telegramId = ctx.from.id;
+  const dealId = Number(ctx.match[1]);
+  const receiverId = ctx.from.id;
 
   const res = await pool.query(
     `
@@ -156,22 +156,30 @@ bot.action(/deal_accept_(\d+)/, async (ctx) => {
     WHERE id = $1
       AND receiver_id = $2
       AND status = 'pending'
-    RETURNING id
+    RETURNING sender_id
     `,
-    [dealId, telegramId]
+    [dealId, receiverId]
   );
 
   if (!res.rows.length) {
-    return ctx.answerCbQuery("❌ You cannot accept this deal.");
+    return ctx.answerCbQuery("❌ Deal not available.");
   }
 
   await ctx.editMessageText(
-    "✅ Deal accepted.\n\nWaiting for sender to complete.",
+    "✅ <b>Deal accepted</b>\n\nWaiting for sender to complete.",
     {
+      parse_mode: "HTML",
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback("⬅ Back to Deals", "deals")],
       ]).reply_markup,
     }
+  );
+
+  // 🔔 Notify sender
+  await ctx.telegram.sendMessage(
+    res.rows[0].sender_id,
+    `✅ <b>Your deal #${dealId} was accepted</b>\n\nYou can now complete it from Deals.`,
+    { parse_mode: "HTML" }
   );
 });
 
@@ -321,6 +329,12 @@ bot.action("deal_pending", async (ctx) => {
         Markup.button.callback(`❌ Reject #${d.id}`, `deal_reject_${d.id}`),
       ]);
     }
+
+    if (Number(d.sender_id) === viewerId) {
+      buttons.push([
+        Markup.button.callback(`🛑 Cancel #${d.id}`, `deal_cancel_${d.id}`),
+      ]);
+    }
   }
 
   buttons.push([Markup.button.callback("⬅ Back", "deals")]);
@@ -429,14 +443,13 @@ bot.action("deal_completed", async (ctx) => {
 });
 bot.action(/deal_reject_(\d+)/, async (ctx) => {
   const dealId = Number(ctx.match[1]);
-  const receiverId = Number(ctx.from.id);
+  const receiverId = ctx.from.id;
 
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
 
-    // Lock deal
     const res = await client.query(
       `
       SELECT sender_id, amount_usd
@@ -450,7 +463,7 @@ bot.action(/deal_reject_(\d+)/, async (ctx) => {
     );
 
     if (!res.rows.length) {
-      throw new Error("Deal not found or not allowed");
+      throw new Error("Deal not found or already handled");
     }
 
     const { sender_id, amount_usd } = res.rows[0];
@@ -465,11 +478,10 @@ bot.action(/deal_reject_(\d+)/, async (ctx) => {
       [amount_usd, sender_id]
     );
 
-    // ❌ Reject deal
     await client.query(
       `
       UPDATE deals
-      SET status = 'rejected'
+      SET status = 'cancelled'
       WHERE id = $1
       `,
       [dealId]
@@ -477,10 +489,10 @@ bot.action(/deal_reject_(\d+)/, async (ctx) => {
 
     await client.query("COMMIT");
 
-    // UI feedback
     await ctx.editMessageText(
-      "❌ Deal rejected.\n\nLocked funds returned to sender.",
+      "❌ <b>Deal rejected</b>\n\nFunds have been returned to the sender.",
       {
+        parse_mode: "HTML",
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback("⬅ Back to Deals", "deals")],
         ]).reply_markup,
@@ -490,12 +502,84 @@ bot.action(/deal_reject_(\d+)/, async (ctx) => {
     // 🔔 Notify sender
     await ctx.telegram.sendMessage(
       sender_id,
-      `❌ <b>Deal Rejected</b>\n\nDeal #${dealId} was rejected.\nYour funds have been unlocked.`,
+      `❌ <b>Your deal #${dealId} was rejected</b>\n\nYour funds have been unlocked.`,
       { parse_mode: "HTML" }
     );
   } catch (err) {
     await client.query("ROLLBACK");
-    await ctx.answerCbQuery("❌ Unable to reject deal.");
+    await ctx.answerCbQuery("❌ Failed to reject deal.");
+  } finally {
+    client.release();
+  }
+});
+
+bot.action(/deal_cancel_(\d+)/, async (ctx) => {
+  const dealId = Number(ctx.match[1]);
+  const senderId = ctx.from.id;
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const res = await client.query(
+      `
+      SELECT amount_usd
+      FROM deals
+      WHERE id = $1
+        AND sender_id = $2
+        AND status = 'pending'
+      FOR UPDATE
+      `,
+      [dealId, senderId]
+    );
+
+    if (!res.rows.length) {
+      throw new Error("Deal cannot be cancelled");
+    }
+
+    const { amount_usd } = res.rows[0];
+
+    // 🔓 Unlock sender funds
+    await client.query(
+      `
+      UPDATE user_balances
+      SET locked_usd = locked_usd - $1
+      WHERE telegram_id = $2
+      `,
+      [amount_usd, senderId]
+    );
+
+    // ❌ Cancel deal
+    await client.query(
+      `
+      UPDATE deals
+      SET status = 'cancelled'
+      WHERE id = $1
+      `,
+      [dealId]
+    );
+
+    await client.query("COMMIT");
+
+    await ctx.telegram.sendMessage(
+      receiverId,
+      `❌ <b>Deal #${dealId} was cancelled</b>\n\nThe sender cancelled the deal.`,
+      { parse_mode: "HTML" }
+    );
+
+    await ctx.editMessageText(
+      "🛑 <b>Deal cancelled</b>\n\nYour locked funds have been returned.",
+      {
+        parse_mode: "HTML",
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback("⬅ Back to Deals", "deals")],
+        ]).reply_markup,
+      }
+    );
+  } catch (err) {
+    await client.query("ROLLBACK");
+    await ctx.answerCbQuery("❌ Unable to cancel deal.");
   } finally {
     client.release();
   }

@@ -12,11 +12,11 @@ export async function assignBTCAddress(telegramId) {
        WHERE currency = 'BTC'
          AND used = FALSE
        LIMIT 1
-       FOR UPDATE`
+       FOR UPDATE`,
     );
 
     if (!res.rows.length) {
-      throw new Error("NO_BTC_ADDRESS_AVAILABLE");
+      throw new Error("NO_BTC_ADDRESS_AVAILABLE_CONTACT_SUPPORT");
     }
 
     const address = res.rows[0].address;
@@ -25,13 +25,57 @@ export async function assignBTCAddress(telegramId) {
       `UPDATE address_pool
        SET used = TRUE
        WHERE address = $1`,
-      [address]
+      [address],
     );
 
     await client.query(
       `INSERT INTO user_wallets (telegram_id, currency, address)
        VALUES ($1, 'BTC', $2)`,
-      [telegramId, address]
+      [telegramId, address],
+    );
+
+    await client.query("COMMIT");
+    return address;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function assignUSDTAddress(telegramId) {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const res = await client.query(
+      `SELECT address
+       FROM address_pool
+       WHERE currency = 'USDT'
+         AND used = FALSE
+       LIMIT 1
+       FOR UPDATE`,
+    );
+
+    if (!res.rows.length) {
+      throw new Error("NO_USDT_ADDRESS_AVAILABLE_CONTACT_SUPPORT");
+    }
+
+    const address = res.rows[0].address;
+
+    await client.query(
+      `UPDATE address_pool
+       SET used = TRUE
+       WHERE address = $1`,
+      [address],
+    );
+
+    await client.query(
+      `INSERT INTO user_wallets (telegram_id, currency, address)
+       VALUES ($1, 'USDT', $2)`,
+      [telegramId, address],
     );
 
     await client.query("COMMIT");

@@ -54,7 +54,7 @@ export async function dealDesc(ctx) {
        FROM user_balances
        WHERE telegram_id=$1
        FOR UPDATE`,
-      [senderId]
+      [senderId],
     );
 
     if (!bal.rows.length) throw new Error("No balance found");
@@ -66,15 +66,24 @@ export async function dealDesc(ctx) {
       `UPDATE user_balances
        SET locked_usd = locked_usd + $1
        WHERE telegram_id = $2`,
-      [amount_usd, senderId]
+      [amount_usd, senderId],
     );
 
     const deal = await client.query(
       `INSERT INTO deals (sender_id, receiver_id, amount_usd, description)
        VALUES ($1,$2,$3,$4)
-       RETURNING id`,
-      [senderId, receiverId, amount_usd, description]
+       RETURNING id, created_at`,
+      [senderId, receiverId, amount_usd, description],
     );
+
+    const { id, created_at } = deal.rows[0];
+    const createdAt = new Date(created_at).toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
     await client.query("COMMIT");
     ctx.session = null;
@@ -85,14 +94,15 @@ export async function dealDesc(ctx) {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback("⬅ Back to Deals", "deals")],
         ]).reply_markup,
-      }
+      },
     );
 
     await ctx.telegram.sendMessage(
       receiverId,
       `📨 <b>New Deal Request</b>\n\n` +
         `💵 <b>$${amount_usd}</b>\n` +
-        `📝 ${description}\n\n` +
+        `📝 ${description}\n` +
+        `⏲️ ${createdAt}\n\n` +
         `Do you want to accept this deal?`,
       {
         parse_mode: "HTML",
@@ -100,16 +110,16 @@ export async function dealDesc(ctx) {
           [
             Markup.button.callback(
               "✅ Accept Deal",
-              `deal_accept_${deal.rows[0].id}`
+              `deal_accept_${deal.rows[0].id}`,
             ),
             Markup.button.callback(
               "❌ Reject Deal",
-              `deal_reject_${deal.rows[0].id}`
+              `deal_reject_${deal.rows[0].id}`,
             ),
           ],
           [Markup.button.callback("📦 View All Deals", "deals")],
         ]).reply_markup,
-      }
+      },
     );
   } catch (e) {
     await client.query("ROLLBACK");

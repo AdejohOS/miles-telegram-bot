@@ -1,79 +1,34 @@
-import { pool } from "../db.js";
 import { MIN_DEPOSIT_USD } from "../config.js";
 import { Markup } from "telegraf";
+import { pool } from "../db.js";
+import { assignUSDTAddress } from "../utils/addressAssignment.js";
 
-export async function depositUSDTTRC20(ctx) {
+export async function depositUSDT(ctx) {
   const telegramId = ctx.from.id;
 
-  // 1️⃣ Check existing address (same as BTC)
   const res = await pool.query(
-    `SELECT usdt_trc20_address
-     FROM user_addresses
-     WHERE telegram_id = $1`,
-    [telegramId]
+    `SELECT address
+     FROM user_wallets
+     WHERE telegram_id = $1 AND currency = 'USDT'`,
+    [telegramId],
   );
 
   let address;
 
-  if (res.rows.length && res.rows[0].usdt_trc20_address) {
-    address = res.rows[0].usdt_trc20_address;
+  if (res.rows.length) {
+    address = res.rows[0].address;
   } else {
-    // 2️⃣ TRANSACTION (THIS IS THE FIX)
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-
-      const poolRes = await client.query(
-        `SELECT tron_address
-         FROM address_pool_trc20
-         WHERE used = false
-         LIMIT 1
-         FOR UPDATE`
-      );
-
-      if (!poolRes.rows.length) {
-        return ctx.editMessageText(
-          "⚠️ *USDT deposits are temporarily unavailable.*\n\n" +
-            "Please try again later or contact support.",
-          { parse_mode: "Markdown" }
-        );
-      }
-
-      address = poolRes.rows[0].tron_address;
-
-      await client.query(
-        `UPDATE address_pool_trc20
-         SET used = true
-         WHERE tron_address = $1`,
-        [address]
-      );
-
-      // ✅ INSERT OR UPDATE (CRITICAL)
-      await client.query(
-        `INSERT INTO user_addresses (telegram_id, usdt_trc20_address)
-         VALUES ($1, $2)
-         ON CONFLICT (telegram_id)
-         DO UPDATE SET usdt_trc20_address = EXCLUDED.usdt_trc20_address`,
-        [telegramId, address]
-      );
-
-      await client.query("COMMIT");
-    } catch (err) {
-      await client.query("ROLLBACK");
-      throw err;
-    } finally {
-      client.release();
-    }
+    address = await assignUSDTAddress(telegramId);
   }
 
   const text =
-    `💰 *USDT Deposit*\n\n` +
-    `Send USDT (TRC20 ONLY) to:\n\n` +
+    `💰 *USDT Deposit (TRC20)*\n\n` +
+    `Send USDT (TRC20) to your personal address:\n\n` +
     `\`${address}\`\n\n` +
-    `This address is unique to you and does not change.\n\n` +
     `💵 *Minimum deposit:* $${MIN_DEPOSIT_USD}\n` +
-    `⚠️ Do NOT send ERC20/BEP20\n` +
-    `ℹ Balance updates after deposit is completed\n\n` +
+    `Network: *TRON (TRC20)*\n\n` +
+    `This address is unique to you.\n\n` +
+    `ℹ Balance updates after payment is completed\n\n` +
     `📋 _Tap the address to copy_`;
 
   await ctx.editMessageText(text, {

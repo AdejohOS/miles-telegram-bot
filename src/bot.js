@@ -179,7 +179,7 @@ bot.action(/deal_accept_(\d+)/, async (ctx) => {
 
   // ✅ Update receiver UI
   await ctx.editMessageText(
-    "✅ Deal accepted.\n\nWaiting for sender to complete.",
+    "✅ Deal accepted.\n\nWaiting for sender to complete deal.",
     {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback("⬅ Back to Deals", "deals")],

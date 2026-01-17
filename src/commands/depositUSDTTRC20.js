@@ -3,7 +3,7 @@ import { Markup } from "telegraf";
 import { pool } from "../db.js";
 import { assignUSDTAddress } from "../utils/addressAssignment.js";
 
-export async function depositUSDT(ctx) {
+export async function depositUSDTTRC20(ctx) {
   const telegramId = ctx.from.id;
 
   const res = await pool.query(

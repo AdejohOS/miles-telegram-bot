@@ -5,7 +5,7 @@ import { notifyAdmins } from "../utils/helper.js";
 export async function withdrawAddressHandle(ctx) {
   if (ctx.session?.step !== "withdraw_address") return;
 
-  const { network, amount } = ctx.session; // BTC | USDT
+  const { network, amount } = ctx.session;
   const address = ctx.message.text.trim();
   const telegramId = ctx.from.id;
 
@@ -14,7 +14,6 @@ export async function withdrawAddressHandle(ctx) {
   try {
     await client.query("BEGIN");
 
-    // 🔒 Lock user USD balance
     const balRes = await client.query(
       `
       SELECT balance_usd, locked_usd
@@ -22,7 +21,7 @@ export async function withdrawAddressHandle(ctx) {
       WHERE telegram_id = $1
       FOR UPDATE
       `,
-      [telegramId]
+      [telegramId],
     );
 
     if (!balRes.rows.length) {
@@ -37,41 +36,50 @@ export async function withdrawAddressHandle(ctx) {
       throw new Error("Insufficient available balance");
     }
 
-    // 🔒 Lock USD
     await client.query(
       `
       UPDATE user_balances
       SET locked_usd = locked_usd + $1
       WHERE telegram_id = $2
       `,
-      [amount, telegramId]
+      [amount, telegramId],
     );
 
-    // 📝 Create withdrawal request
     await client.query(
       `
       INSERT INTO withdrawal_requests
       (telegram_id, amount_usd, payout_currency, address)
       VALUES ($1, $2, $3, $4)
       `,
-      [telegramId, amount, network, address]
+      [telegramId, amount, network, address],
     );
 
     await client.query("COMMIT");
+
+    // 🔍 Fetch username
+    const userRes = await pool.query(
+      `SELECT username FROM users WHERE telegram_id = $1`,
+      [telegramId],
+    );
+
+    const username = userRes.rows[0]?.username
+      ? `@${userRes.rows[0].username}`
+      : "N/A";
 
     // 🔔 Notify admins
     await notifyAdmins(
       ctx.telegram,
       `🚨 <b>New Withdrawal Request</b>
 
-👤 User ID: <code>${telegramId}</code>
-💵 Amount: <b>$${amount}</b>
-🌐 Network: <b>${network}</b>
-📍 Address:
+👤 <b>User:</b> ${username}
+🆔 <b>Telegram ID:</b> <code>${telegramId}</code>
+💵 <b>Amount:</b> <b>$${amount}</b>
+🌐 <b>Network:</b> <b>${network}</b>
+📍 <b>Address:</b>
 <code>${address}</code>`,
       Markup.inlineKeyboard([
         [Markup.button.callback("💸 View Withdrawals", "admin_withdrawals")],
-      ]).reply_markup
+      ]).reply_markup,
     );
 
     ctx.session = null;
@@ -81,7 +89,7 @@ export async function withdrawAddressHandle(ctx) {
         `💵 Amount: <b>$${amount}</b>\n` +
         `🌐 Network: <b>${network}</b>\n\n` +
         "Funds are locked pending admin approval.",
-      { parse_mode: "HTML" }
+      { parse_mode: "HTML" },
     );
   } catch (err) {
     await client.query("ROLLBACK");

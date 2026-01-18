@@ -478,8 +478,8 @@ bot.action("deal_active", async (ctx) => {
     `
     SELECT id, sender_id, receiver_id, amount_usd, description
     FROM deals
-    WHERE status='accepted'
-      AND (sender_id=$1 OR receiver_id=$1)
+    WHERE status = 'accepted'
+      AND (sender_id = $1 OR receiver_id = $1)
     ORDER BY created_at DESC
     `,
     [viewerId],
@@ -489,7 +489,6 @@ bot.action("deal_active", async (ctx) => {
     return ctx.editMessageText("📦 <b>Active Deals</b>\n\nNo active deals.", {
       parse_mode: "HTML",
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback("⚖ Open Dispute", `deal_dispute_${d.id}`)],
         [Markup.button.callback("⬅ Back", "deals")],
       ]).reply_markup,
     });
@@ -502,18 +501,33 @@ bot.action("deal_active", async (ctx) => {
         const role =
           Number(d.sender_id) === viewerId ? "📤 You sent" : "📥 You received";
 
-        return `<b>#${d.id}</b>\n${role}\n💵 $${d.amount_usd}\n📝 ${d.description}`;
+        return (
+          `<b>#${d.id}</b>\n` +
+          `${role}\n` +
+          `💵 $${d.amount_usd}\n` +
+          `📝 ${d.description}`
+        );
       })
       .join("\n\n");
 
   const buttons = [];
 
   for (const d of res.rows) {
+    const row = [];
+
+    // Sender can complete
     if (Number(d.sender_id) === viewerId) {
-      buttons.push([
+      row.push(
         Markup.button.callback(`💰 Complete #${d.id}`, `deal_complete_${d.id}`),
-      ]);
+      );
     }
+
+    // BOTH parties can dispute
+    row.push(
+      Markup.button.callback(`⚖ Dispute #${d.id}`, `deal_dispute_${d.id}`),
+    );
+
+    buttons.push(row);
   }
 
   buttons.push([Markup.button.callback("⬅ Back", "deals")]);

@@ -953,12 +953,19 @@ bot.action(/withdraw_paid_(\d+)/, adminOnly, (ctx) =>
 bot.command("admin_debit", adminOnly, adminDebit);
 
 bot.action("admin_debit", adminOnly, async (ctx) => {
-  ctx.session = { step: "admin_debit" };
+  await ctx.answerCbQuery();
 
-  await ctx.editMessageText(
-    "➖ <b>Admin Debit</b>\n\nSend:\n<code>telegram_id amount reason</code>",
+  const msg = await ctx.editMessageText(
+    "➖ <b>Admin Debit</b>\n\n" +
+      "Send:\n" +
+      "<code>telegram_id | @username | wallet amount reason</code>",
     { parse_mode: "HTML" },
   );
+
+  ctx.session = {
+    step: "admin_debit",
+    adminMessageId: msg.message_id,
+  };
 });
 
 bot.on("message", async (ctx, next) => {

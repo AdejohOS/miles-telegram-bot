@@ -3,17 +3,15 @@ import { Markup } from "telegraf";
 
 export async function adminDebit(ctx) {
   if (!ctx.message?.text) return;
+  if (ctx.session?.step !== "admin_debit") return;
 
   const adminId = ctx.from.id;
   const chatId = ctx.chat.id;
-  const msgId = ctx.session?.adminMessageId;
+  const msgId = ctx.session.adminMessageId;
 
   if (!msgId) {
-    // Safety fallback (should not normally happen)
     return ctx.reply("❌ Admin session expired. Please restart admin menu.");
   }
-
-  const parts = ctx.message.text.trim().split(" ");
 
   const backKeyboard = Markup.inlineKeyboard([
     [Markup.button.callback("⬅ Back", "admin_menu")],
@@ -24,6 +22,8 @@ export async function adminDebit(ctx) {
       parse_mode: "HTML",
       reply_markup: backKeyboard.reply_markup,
     });
+
+  const parts = ctx.message.text.trim().split(" ");
 
   if (parts.length < 3) {
     return edit(
@@ -125,7 +125,7 @@ export async function adminDebit(ctx) {
         `<b>Amount:</b> $${amountUsd}`,
     );
 
-    // Notify user (this is OK to send separately)
+    // 🔔 Notify user (separate message is OK)
     await ctx.telegram.sendMessage(
       telegramId,
       `⚠️ <b>Account Debited</b>\n\n` +

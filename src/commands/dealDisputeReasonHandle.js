@@ -1,6 +1,6 @@
 import { Markup } from "telegraf";
 import { pool } from "../db.js";
-import { notifyAdmins } from "../utils/notifyAdmins.js";
+import { notifyAdmins } from "../utils/helper.js";
 
 export async function dealDisputeReasonHandle(ctx) {
   if (ctx.session?.step !== "dispute_reason") return;

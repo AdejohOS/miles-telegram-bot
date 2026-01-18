@@ -740,7 +740,7 @@ bot.action(/deal_dispute_(\d+)/, async (ctx) => {
 
   const res = await pool.query(
     `
-    SELECT id, sender_id, receiver_id, status
+    SELECT sender_id, receiver_id, status
     FROM deals
     WHERE id = $1 AND status = 'accepted'
     `,
@@ -751,7 +751,10 @@ bot.action(/deal_dispute_(\d+)/, async (ctx) => {
     return ctx.answerCbQuery("❌ Deal not eligible for dispute.");
   }
 
-  if (![res.rows[0].sender_id, res.rows[0].receiver_id].includes(userId)) {
+  const senderId = Number(res.rows[0].sender_id);
+  const receiverId = Number(res.rows[0].receiver_id);
+
+  if (userId !== senderId && userId !== receiverId) {
     return ctx.answerCbQuery("❌ Not your deal.");
   }
 

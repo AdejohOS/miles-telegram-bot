@@ -70,6 +70,15 @@ export async function adminDebit(ctx) {
     return edit("❌ <b>User not found.</b>");
   }
 
+  const userRes = await pool.query(
+    `SELECT username FROM users WHERE telegram_id = $1`,
+    [telegramId],
+  );
+
+  const username = userRes.rows[0]?.username
+    ? `@${userRes.rows[0].username}`
+    : "N/A";
+
   const client = await pool.connect();
 
   try {
@@ -122,6 +131,7 @@ export async function adminDebit(ctx) {
     await edit(
       `✅ <b>Debit Successful</b>\n\n` +
         `<b>User:</b> ${telegramId}\n` +
+        `<b>Username:</b> ${username}\n` +
         `<b>Amount:</b> $${amountUsd}`,
     );
 

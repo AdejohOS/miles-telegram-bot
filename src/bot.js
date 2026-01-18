@@ -958,7 +958,7 @@ bot.action("admin_debit", adminOnly, async (ctx) => {
   const msg = await ctx.editMessageText(
     "➖ <b>Admin Debit</b>\n\n" +
       "Send:\n" +
-      "<code>telegram_id | @username | wallet amount reason</code>",
+      "<code>telegram_id/@username | amount | reason</code>",
     { parse_mode: "HTML" },
   );
 

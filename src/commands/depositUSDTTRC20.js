@@ -2,14 +2,9 @@ import { MIN_DEPOSIT_USD } from "../config.js";
 import { Markup } from "telegraf";
 import { pool } from "../db.js";
 import { assignUSDTAddress } from "../utils/addressAssignment.js";
-import { safeEditOrReply } from "../utils/helper.js";
 
 export async function depositUSDTTRC20(ctx) {
   const telegramId = ctx.from.id;
-
-  const keyboard = Markup.inlineKeyboard([
-    [Markup.button.callback("⬅ Back to Deposit Menu", "deposit_menu")],
-  ]);
 
   try {
     const res = await pool.query(
@@ -37,24 +32,40 @@ export async function depositUSDTTRC20(ctx) {
       `ℹ Balance updates after payment is completed\n\n` +
       `📋 _Tap the address to copy_`;
 
-    return safeEditOrReply(ctx, text, keyboard);
-  } catch (err) {
-    if (err.message === "NO_USDT_ADDRESS_AVAILABLE") {
-      return safeEditOrReply(
-        ctx,
-        "⚠️ *USDT deposits are temporarily unavailable*\n\n" +
-          "All deposit addresses are currently in use.\n" +
-          "Please try again later.",
-        keyboard,
-      );
+    if (ctx.callbackQuery?.message) {
+      return ctx.editMessageText(text, {
+        parse_mode: "Markdown",
+        ...Markup.inlineKeyboard([
+          [Markup.button.callback("⬅ Back to Deposit Menu", "deposit_menu")],
+        ]),
+      });
     }
 
-    console.error("depositUSDTTRC20 error:", err);
+    return ctx.reply(text, {
+      parse_mode: "Markdown",
+      ...Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Back to Deposit Menu", "deposit_menu")],
+      ]),
+    });
+  } catch (err) {
+    const errorText =
+      err.message === "NO_USDT_ADDRESS_AVAILABLE_CONTACT_SUPPORT"
+        ? "⚠️ *USDT deposits are temporarily unavailable*\n\n" +
+          "All deposit addresses are currently in use.\n" +
+          "Please try again later."
+        : "❌ *An unexpected error occurred*\n\n" + "Please try again later.";
 
-    return safeEditOrReply(
-      ctx,
-      "❌ *Something went wrong*\n\nPlease try again in a few minutes.",
-      keyboard,
-    );
+    const options = {
+      parse_mode: "Markdown",
+      ...Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Back to Deposit Menu", "deposit_menu")],
+      ]),
+    };
+
+    if (ctx.callbackQuery?.message) {
+      return ctx.editMessageText(errorText, options);
+    }
+
+    return ctx.reply(errorText, options);
   }
 }

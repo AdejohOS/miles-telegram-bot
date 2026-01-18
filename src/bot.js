@@ -48,6 +48,7 @@ import { shopSearchHandle } from "./commands/shopSearchHandle.js";
 import { adminDebit } from "./commands/adminDebit.js";
 
 import { adminStats } from "./commands/adminStats.js";
+import { adminSanctionsMenu } from "./commands/adminSanctionsMenu.js";
 
 import {
   addItemTitle,

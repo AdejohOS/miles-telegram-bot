@@ -58,8 +58,6 @@ import {
 import { escrowMenu } from "./commands/escrow.js";
 import { dealReceiver, dealAmount, dealDesc } from "./commands/dealFlow.js";
 
-import { dealDisputeStart } from "./commands/dealDisputeStart.js";
-
 import { adminDisputes } from "./commands/dealDisputes.js";
 import { dealDisputeReasonHandle } from "./commands/dealDisputeReasonHandle.js";
 
@@ -735,7 +733,7 @@ bot.action(/deal_cancel_(\d+)/, async (ctx) => {
     client.release();
   }
 });
-bot.action(/deal_dispute_(\d+)/, dealDisputeStart);
+
 bot.action(/deal_dispute_(\d+)/, async (ctx) => {
   const dealId = Number(ctx.match[1]);
   const userId = Number(ctx.from.id);

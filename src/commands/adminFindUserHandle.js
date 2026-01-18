@@ -107,6 +107,7 @@ export async function adminFindUserHandle(ctx) {
 <b>Username:</b> ${user.username ? "@" + user.username : "N/A"}
 
 <b>💰 Balance:</b> ${balanceUsd}
+
 <b>🏦 Wallets</b>
 <b>BTC:</b> <code>${btcAddress}</code>
 <b>USDT (TRC20):</b> <code>${usdtAddress}</code>

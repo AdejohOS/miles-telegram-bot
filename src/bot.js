@@ -58,6 +58,10 @@ import {
 import { escrowMenu } from "./commands/escrow.js";
 import { dealReceiver, dealAmount, dealDesc } from "./commands/dealFlow.js";
 
+import { dealDisputeStart } from "./commands/dealDisputeStart.js";
+import { dealDisputeReason } from "./commands/dealDisputeReason.js";
+import { adminDisputes } from "./commands/dealDisputes.js";
+
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -716,6 +720,170 @@ bot.action(/deal_cancel_(\d+)/, async (ctx) => {
     client.release();
   }
 });
+bot.action(/deal_dispute_(\d+)/, dealDisputeStart);
+bot.action(/deal_dispute_(\d+)/, async (ctx) => {
+  const dealId = ctx.match[1];
+
+  ctx.session = {
+    step: "deal_dispute_reason",
+    dealId,
+  };
+
+  await ctx.editMessageText(
+    "⚖ <b>Open Dispute</b>\n\nPlease describe the issue:",
+    {
+      parse_mode: "HTML",
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Cancel", "deals")],
+      ]).reply_markup,
+    },
+  );
+});
+bot.action("admin_disputes", adminOnly, adminDisputes);
+
+bot.action(/dispute_refund_(\d+)/, adminOnly, async (ctx) => {
+  const disputeId = ctx.match[1];
+  const adminId = ctx.from.id;
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const r = await client.query(
+      `
+      SELECT d.id, d.sender_id, d.amount_usd
+      FROM deal_disputes dd
+      JOIN deals d ON d.id = dd.deal_id
+      WHERE dd.id = $1 AND dd.status = 'open'
+      FOR UPDATE
+    `,
+      [disputeId],
+    );
+
+    if (!r.rows.length) throw new Error();
+
+    const { id, sender_id, amount_usd } = r.rows[0];
+
+    await client.query(
+      `
+      UPDATE user_balances
+      SET locked_usd = locked_usd - $1,
+          balance_usd = balance_usd + $1
+      WHERE telegram_id = $2
+    `,
+      [amount_usd, sender_id],
+    );
+
+    await client.query(`UPDATE deals SET status='refunded' WHERE id=$1`, [id]);
+
+    await client.query(
+      `
+      UPDATE deal_disputes
+      SET status='resolved',
+          resolution='sender_refund',
+          admin_id=$1,
+          resolved_at=NOW()
+      WHERE id=$2
+    `,
+      [adminId, disputeId],
+    );
+
+    await client.query(
+      `
+      INSERT INTO transactions
+      (telegram_id, amount_usd, type, source, reference)
+      VALUES ($1, $2, 'credit', 'dispute', $3)
+    `,
+      [sender_id, amount_usd, `deal:${id}`],
+    );
+
+    await client.query("COMMIT");
+
+    await ctx.editMessageText("↩ Sender refunded successfully.");
+  } catch {
+    await client.query("ROLLBACK");
+    ctx.reply("❌ Refund failed.");
+  } finally {
+    client.release();
+  }
+});
+bot.action(/dispute_pay_(\d+)/, adminOnly, async (ctx) => {
+  const disputeId = ctx.match[1];
+  const adminId = ctx.from.id;
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const r = await client.query(
+      `
+      SELECT d.id, d.receiver_id, d.sender_id, d.amount_usd
+      FROM deal_disputes dd
+      JOIN deals d ON d.id = dd.deal_id
+      WHERE dd.id = $1 AND dd.status = 'open'
+      FOR UPDATE
+    `,
+      [disputeId],
+    );
+
+    if (!r.rows.length) throw new Error();
+
+    const { id, receiver_id, sender_id, amount_usd } = r.rows[0];
+
+    await client.query(
+      `
+      UPDATE user_balances
+      SET locked_usd = locked_usd - $1,
+          balance_usd = balance_usd - $1
+      WHERE telegram_id = $2
+    `,
+      [amount_usd, sender_id],
+    );
+
+    await client.query(
+      `
+      UPDATE user_balances
+      SET balance_usd = balance_usd + $1
+      WHERE telegram_id = $2
+    `,
+      [amount_usd, receiver_id],
+    );
+
+    await client.query(`UPDATE deals SET status='completed' WHERE id=$1`, [id]);
+
+    await client.query(
+      `
+      UPDATE deal_disputes
+      SET status='resolved',
+          resolution='receiver_paid',
+          admin_id=$1,
+          resolved_at=NOW()
+      WHERE id=$2
+    `,
+      [adminId, disputeId],
+    );
+
+    await client.query(
+      `
+      INSERT INTO transactions
+      (telegram_id, amount_usd, type, source, reference)
+      VALUES ($1, $2, 'credit', 'dispute', $3)
+    `,
+      [receiver_id, amount_usd, `deal:${id}`],
+    );
+
+    await client.query("COMMIT");
+
+    await ctx.editMessageText("💰 Receiver paid successfully.");
+  } catch {
+    await client.query("ROLLBACK");
+    ctx.reply("❌ Payment failed.");
+  } finally {
+    client.release();
+  }
+});
 
 bot.action("support", supportCommand);
 
@@ -887,6 +1055,10 @@ bot.on("message", async (ctx, next) => {
     if (ctx.session.step === "find_user") return adminFindUserHandle(ctx);
 
     if (ctx.session.step === "admin_debit") return adminDebit(ctx);
+  }
+
+  if (ctx.session.step === "deal_dispute_reason") {
+    return dealDisputeReason(ctx);
   }
 
   return next();

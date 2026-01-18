@@ -14,7 +14,10 @@ export async function adminMenu(ctx) {
         Markup.button.callback("➕ Credit User", "admin_credit_menu"),
         Markup.button.callback("➖ Debit User", "admin_debit"),
       ],
-      [Markup.button.callback("💸 Withdrawals", "admin_withdrawals")],
+      [
+        Markup.button.callback("💸 Withdrawals", "admin_withdrawals"),
+        Markup.button.callback("⚖ Deal Disputes", "admin_disputes"),
+      ],
       [Markup.button.callback("🛒 Shop Manager", "admin_shop_menu")],
 
       [Markup.button.callback("📊 Stats", "admin_stats")],

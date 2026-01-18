@@ -16,7 +16,7 @@ export async function startCommand(ctx) {
         "• Tap *Username*\n" +
         "• Create a unique username\n\n" +
         "After setting it, come back and send /start again.",
-      { parse_mode: "Markdown" }
+      { parse_mode: "Markdown" },
     );
   }
 
@@ -35,7 +35,7 @@ export async function startCommand(ctx) {
 
     [Markup.button.callback("🛒 Shop", "shop_menu")],
     [Markup.button.callback("🤝 Escrow", "deals")],
-    [Markup.button.callback("📜 My Orders", "orders")],
+
     [Markup.button.callback("📞 Support", "support")],
   ]);
 
@@ -56,7 +56,7 @@ export async function startCommand(ctx) {
       ON CONFLICT (telegram_id)
       DO UPDATE SET username = EXCLUDED.username
       `,
-      [telegramId, username]
+      [telegramId, username],
     );
 
     // ✅ Ensure USD balance row exists
@@ -66,7 +66,7 @@ export async function startCommand(ctx) {
       VALUES ($1, 0)
       ON CONFLICT (telegram_id) DO NOTHING
       `,
-      [telegramId]
+      [telegramId],
     );
   } catch (err) {
     console.error("DB error in startCommand:", err);

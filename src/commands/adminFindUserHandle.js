@@ -17,7 +17,7 @@ export async function adminFindUserHandle(ctx) {
     foundBy = "Telegram ID";
     const r = await pool.query(
       `SELECT telegram_id FROM users WHERE telegram_id = $1`,
-      [input]
+      [input],
     );
     telegramId = r.rows[0]?.telegram_id;
   }
@@ -27,7 +27,7 @@ export async function adminFindUserHandle(ctx) {
     foundBy = "Username";
     const r = await pool.query(
       `SELECT telegram_id FROM users WHERE username = $1`,
-      [input.slice(1)]
+      [input.slice(1)],
     );
     telegramId = r.rows[0]?.telegram_id;
   }
@@ -37,7 +37,7 @@ export async function adminFindUserHandle(ctx) {
     foundBy = "Wallet Address";
     const r = await pool.query(
       `SELECT telegram_id FROM user_wallets WHERE address = $1`,
-      [input]
+      [input],
     );
     telegramId = r.rows[0]?.telegram_id;
   }
@@ -52,14 +52,14 @@ export async function adminFindUserHandle(ctx) {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback("⬅ Back", "admin_menu")],
         ]).reply_markup,
-      }
+      },
     );
   }
 
   // Fetch user
   const userRes = await pool.query(
     `SELECT telegram_id, username FROM users WHERE telegram_id = $1`,
-    [telegramId]
+    [telegramId],
   );
 
   const user = userRes.rows[0];
@@ -67,12 +67,26 @@ export async function adminFindUserHandle(ctx) {
   // Fetch balance
   const balRes = await pool.query(
     `SELECT balance_usd FROM user_balances WHERE telegram_id = $1`,
-    [telegramId]
+    [telegramId],
   );
 
   const balanceUsd = balRes.rows.length
     ? `$${formatBalance(balRes.rows[0].balance_usd)}`
     : "$0.00";
+
+  // Fetch wallets
+  const walletRes = await pool.query(
+    `SELECT currency, address FROM user_wallets WHERE telegram_id = $1`,
+    [telegramId],
+  );
+
+  let btcAddress = "Nil";
+  let usdtAddress = "Nil";
+
+  for (const w of walletRes.rows) {
+    if (w.currency === "BTC") btcAddress = w.address;
+    if (w.currency === "USDT") usdtAddress = w.address;
+  }
 
   // Keep session for next step
   ctx.session = {
@@ -93,6 +107,9 @@ export async function adminFindUserHandle(ctx) {
 <b>Username:</b> ${user.username ? "@" + user.username : "N/A"}
 
 <b>💰 Balance:</b> ${balanceUsd}
+<b>🏦 Wallets</b>
+<b>BTC:</b> <code>${btcAddress}</code>
+<b>USDT (TRC20):</b> <code>${usdtAddress}</code>
     `,
     {
       parse_mode: "HTML",
@@ -100,6 +117,6 @@ export async function adminFindUserHandle(ctx) {
         [Markup.button.callback("➕ Credit User", "admin_credit_found_user")],
         [Markup.button.callback("⬅ Back", "admin_menu")],
       ]).reply_markup,
-    }
+    },
   );
 }

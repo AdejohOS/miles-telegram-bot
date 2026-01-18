@@ -58,7 +58,7 @@ import {
 import { escrowMenu } from "./commands/escrow.js";
 import { dealReceiver, dealAmount, dealDesc } from "./commands/dealFlow.js";
 
-import { adminDisputes } from "./commands/dealDisputes.js";
+import { adminDisputes } from "./commands/adminDisputes.js";
 import { dealDisputeReasonHandle } from "./commands/dealDisputeReasonHandle.js";
 
 dotenv.config();

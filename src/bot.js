@@ -524,7 +524,7 @@ bot.action("deal_active", async (ctx) => {
 
     // BOTH parties can dispute
     row.push(
-      Markup.button.callback(`⚖ Dispute #${d.id}`, `deal_dispute_${d.id}`),
+      Markup.button.callback(`⚖ Dispute Deal #${d.id}`, `deal_dispute_${d.id}`),
     );
 
     buttons.push(row);

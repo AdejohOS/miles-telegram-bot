@@ -8,10 +8,15 @@ export async function depositUSDTTRC20(ctx) {
   const telegramId = ctx.from.id;
 
   try {
+    // ✅ CRITICAL: ensure session exists
+    ctx.session ??= {};
+
     const res = await pool.query(
-      `SELECT address
-       FROM user_wallets
-       WHERE telegram_id = $1 AND currency = 'USDT'`,
+      `
+      SELECT address
+      FROM user_wallets
+      WHERE telegram_id = $1 AND currency = 'USDT'
+      `,
       [telegramId],
     );
 
@@ -23,7 +28,7 @@ export async function depositUSDTTRC20(ctx) {
       address = await assignUSDTAddress(telegramId);
     }
 
-    // 🔔 Deposit intent notification (USDT)
+    // 🔔 Deposit intent notification (USDT) — session guarded
     ctx.session.depositIntent ??= {};
 
     if (!ctx.session.depositIntent.USDT) {
@@ -50,6 +55,7 @@ export async function depositUSDTTRC20(ctx) {
 ⏳ User has opened USDT deposit screen.`,
       );
 
+      // ✅ Mark as notified
       ctx.session.depositIntent.USDT = true;
     }
 
@@ -63,28 +69,27 @@ export async function depositUSDTTRC20(ctx) {
       `ℹ Balance updates after payment is completed\n\n` +
       `📋 _Tap the address to copy_`;
 
-    if (ctx.callbackQuery?.message) {
-      return ctx.editMessageText(text, {
-        parse_mode: "Markdown",
-        ...Markup.inlineKeyboard([
-          [Markup.button.callback("⬅ Back to Deposit Menu", "deposit_menu")],
-        ]),
-      });
-    }
-
-    return ctx.reply(text, {
+    const options = {
       parse_mode: "Markdown",
       ...Markup.inlineKeyboard([
         [Markup.button.callback("⬅ Back to Deposit Menu", "deposit_menu")],
       ]),
-    });
+    };
+
+    if (ctx.callbackQuery?.message) {
+      return ctx.editMessageText(text, options);
+    }
+
+    return ctx.reply(text, options);
   } catch (err) {
+    console.error("depositUSDTTRC20 error:", err);
+
     const errorText =
       err.message === "NO_USDT_ADDRESS_AVAILABLE_CONTACT_SUPPORT"
         ? "⚠️ *USDT deposits are temporarily unavailable*\n\n" +
           "All deposit addresses are currently in use.\n" +
           "Please try again later."
-        : "❌ *An unexpected error occurred*\n\n" + "Please try again later.";
+        : "❌ *An unexpected error occurred*\n\nPlease try again later.";
 
     const options = {
       parse_mode: "Markdown",

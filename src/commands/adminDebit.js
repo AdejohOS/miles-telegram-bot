@@ -1,4 +1,5 @@
 import { pool } from "../db.js";
+import { Markup } from "telegraf";
 
 export async function adminDebit(ctx) {
   if (!ctx.message?.text) return;
@@ -6,16 +7,56 @@ export async function adminDebit(ctx) {
   const adminId = ctx.from.id;
   const parts = ctx.message.text.trim().split(" ");
 
+  const backKeyboard = Markup.inlineKeyboard([
+    [Markup.button.callback("⬅ Back", "admin_menu")],
+  ]);
+
   if (parts.length < 3) {
-    return ctx.reply("❌ Invalid format.\n\nUse:\ntelegram_id amount reason");
+    return ctx.reply(
+      "❌ Invalid format.\n\nUse:\ntelegram_id | @username | wallet amount reason",
+      { reply_markup: backKeyboard.reply_markup },
+    );
   }
 
-  const telegramId = Number(parts[0]);
+  const identifier = parts[0];
   const amountUsd = Number(parts[1]);
   const reason = parts.slice(2).join(" ");
 
-  if (!telegramId || !amountUsd || amountUsd <= 0) {
-    return ctx.reply("❌ Invalid telegram ID or amount.");
+  if (!amountUsd || amountUsd <= 0) {
+    return ctx.reply("❌ Invalid amount.", {
+      reply_markup: backKeyboard.reply_markup,
+    });
+  }
+
+  let telegramId;
+
+  // 1️⃣ Telegram ID
+  if (/^\d+$/.test(identifier)) {
+    telegramId = Number(identifier);
+  }
+
+  // 2️⃣ Username
+  else if (identifier.startsWith("@")) {
+    const r = await pool.query(
+      `SELECT telegram_id FROM users WHERE username = $1`,
+      [identifier.slice(1)],
+    );
+    telegramId = r.rows[0]?.telegram_id;
+  }
+
+  // 3️⃣ Wallet address (BTC / USDT)
+  else {
+    const r = await pool.query(
+      `SELECT telegram_id FROM user_wallets WHERE address = $1`,
+      [identifier],
+    );
+    telegramId = r.rows[0]?.telegram_id;
+  }
+
+  if (!telegramId) {
+    return ctx.reply("❌ User not found.", {
+      reply_markup: backKeyboard.reply_markup,
+    });
   }
 
   const client = await pool.connect();
@@ -23,7 +64,7 @@ export async function adminDebit(ctx) {
   try {
     await client.query("BEGIN");
 
-    // 🔒 Lock balance row
+    // 🔒 Lock balance
     const balRes = await client.query(
       `
       SELECT balance_usd, locked_usd
@@ -31,7 +72,7 @@ export async function adminDebit(ctx) {
       WHERE telegram_id = $1
       FOR UPDATE
       `,
-      [telegramId]
+      [telegramId],
     );
 
     if (!balRes.rows.length) {
@@ -45,7 +86,7 @@ export async function adminDebit(ctx) {
       throw new Error("Insufficient available balance");
     }
 
-    // 💸 Deduct USD
+    // 💸 Debit
     await client.query(
       `
       UPDATE user_balances
@@ -53,17 +94,17 @@ export async function adminDebit(ctx) {
           updated_at = NOW()
       WHERE telegram_id = $2
       `,
-      [amountUsd, telegramId]
+      [amountUsd, telegramId],
     );
 
-    // 🧾 Log transaction
+    // 🧾 Log
     await client.query(
       `
       INSERT INTO transactions
       (telegram_id, amount_usd, type, source, reference)
       VALUES ($1, $2, 'debit', 'admin', $3)
       `,
-      [telegramId, amountUsd, `admin:${adminId} | ${reason}`]
+      [telegramId, amountUsd, `admin:${adminId} | ${reason}`],
     );
 
     await client.query("COMMIT");
@@ -72,7 +113,8 @@ export async function adminDebit(ctx) {
 
     // ✅ Notify admin
     await ctx.reply(
-      `✅ Debit successful\n\nUser: ${telegramId}\nAmount: $${amountUsd}`
+      `✅ Debit successful\n\nUser: ${telegramId}\nAmount: $${amountUsd}`,
+      { reply_markup: backKeyboard.reply_markup },
     );
 
     // 🔔 Notify user
@@ -81,12 +123,15 @@ export async function adminDebit(ctx) {
       `⚠️ <b>Account Debited</b>\n\n` +
         `Amount: <b>$${amountUsd}</b>\n` +
         `Reason: ${reason}`,
-      { parse_mode: "HTML" }
+      { parse_mode: "HTML" },
     );
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("Admin debit failed:", err);
-    await ctx.reply("❌ Debit failed: " + err.message);
+
+    await ctx.reply("❌ Debit failed: " + err.message, {
+      reply_markup: backKeyboard.reply_markup,
+    });
   } finally {
     client.release();
   }

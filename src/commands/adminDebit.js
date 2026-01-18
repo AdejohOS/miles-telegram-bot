@@ -29,7 +29,7 @@ export async function adminDebit(ctx) {
     return edit(
       "❌ <b>Invalid format</b>\n\n" +
         "Use:\n" +
-        "<code>telegram_id | @username | wallet amount reason</code>",
+        "<code>telegram_id/@username | amount |reason</code>",
     );
   }
 

@@ -21,6 +21,7 @@ export async function adminMenu(ctx) {
       [Markup.button.callback("🛒 Shop Manager", "admin_shop_menu")],
 
       [Markup.button.callback("📊 Stats", "admin_stats")],
+      [Markup.button.callback("🛑 User Sanctions", "admin_sanctions")],
       [Markup.button.callback("⬅ Back to Menu", "main_menu")],
     ]),
   });

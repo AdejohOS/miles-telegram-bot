@@ -227,6 +227,20 @@ CREATE TABLE deal_disputes (
 );
 
 
+CREATE TABLE user_sanctions (
+  id SERIAL PRIMARY KEY,
+  telegram_id BIGINT NOT NULL,
+  action TEXT NOT NULL CHECK (action IN ('warning', 'temp_block', 'ban')),
+  reason TEXT NOT NULL,
+  issued_by BIGINT NOT NULL,
+  expires_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+
+  CONSTRAINT fk_user FOREIGN KEY (telegram_id)
+    REFERENCES users(telegram_id)
+);
+
+
 
 
 

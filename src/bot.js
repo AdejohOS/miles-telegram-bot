@@ -896,6 +896,8 @@ bot.action("community", (ctx) => {
 bot.action("main_menu", startCommand);
 
 // ADMIN COMMANDS
+bot.action("admin_sanctions", adminOnly, adminSanctionsMenu);
+
 bot.action("admin_menu", adminOnly, adminMenu);
 
 bot.action("admin_stats", adminOnly, adminStats);

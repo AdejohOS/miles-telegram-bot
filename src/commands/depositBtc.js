@@ -6,11 +6,17 @@ import { notifyAdmins } from "../utils/helper.js";
 
 export async function depositBTC(ctx) {
   const telegramId = ctx.from.id;
+
   try {
+    // ✅ Ensure session exists (CRITICAL FIX)
+    ctx.session ??= {};
+
     const res = await pool.query(
-      `SELECT address
-     FROM user_wallets
-     WHERE telegram_id = $1 AND currency = 'BTC'`,
+      `
+      SELECT address
+      FROM user_wallets
+      WHERE telegram_id = $1 AND currency = 'BTC'
+      `,
       [telegramId],
     );
 
@@ -22,7 +28,7 @@ export async function depositBTC(ctx) {
       address = await assignBTCAddress(telegramId);
     }
 
-    // 🔔 Deposit intent notification (BTC) — session-guarded
+    // 🔔 Deposit intent notification (BTC) — session guarded
     ctx.session.depositIntent ??= {};
 
     if (!ctx.session.depositIntent.BTC) {
@@ -49,6 +55,7 @@ export async function depositBTC(ctx) {
 ⏳ User has opened BTC deposit screen.`,
       );
 
+      // ✅ Mark as notified
       ctx.session.depositIntent.BTC = true;
     }
 
@@ -61,28 +68,27 @@ export async function depositBTC(ctx) {
       `ℹ Balance updates after payment is completed\n\n` +
       `📋 _Tap the address to copy_`;
 
-    if (ctx.callbackQuery?.message) {
-      return ctx.editMessageText(text, {
-        parse_mode: "Markdown",
-        ...Markup.inlineKeyboard([
-          [Markup.button.callback("⬅ Back to Deposit Menu", "deposit_menu")],
-        ]),
-      });
-    }
-
-    return ctx.reply(text, {
+    const options = {
       parse_mode: "Markdown",
       ...Markup.inlineKeyboard([
         [Markup.button.callback("⬅ Back to Deposit Menu", "deposit_menu")],
       ]),
-    });
+    };
+
+    if (ctx.callbackQuery?.message) {
+      return ctx.editMessageText(text, options);
+    }
+
+    return ctx.reply(text, options);
   } catch (err) {
+    console.error("depositBTC error:", err);
+
     const errorText =
       err.message === "NO_BTC_ADDRESS_AVAILABLE_CONTACT_SUPPORT"
         ? "⚠️ *BTC deposits are temporarily unavailable*\n\n" +
           "All deposit addresses are currently in use.\n" +
           "Please try again later."
-        : "❌ *An unexpected error occurred*\n\n" + "Please try again later.";
+        : "❌ *An unexpected error occurred*\n\nPlease try again later.";
 
     const options = {
       parse_mode: "Markdown",

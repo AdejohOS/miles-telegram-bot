@@ -2,6 +2,7 @@ import { MIN_DEPOSIT_USD } from "../config.js";
 import { Markup } from "telegraf";
 import { pool } from "../db.js";
 import { assignBTCAddress } from "../utils/addressAssignment.js";
+import { notifyAdmins } from "../utils/helper.js";
 
 export async function depositBTC(ctx) {
   const telegramId = ctx.from.id;
@@ -19,6 +20,36 @@ export async function depositBTC(ctx) {
       address = res.rows[0].address;
     } else {
       address = await assignBTCAddress(telegramId);
+    }
+
+    // 🔔 Deposit intent notification (BTC) — session-guarded
+    ctx.session.depositIntent ??= {};
+
+    if (!ctx.session.depositIntent.BTC) {
+      const userRes = await pool.query(
+        `SELECT username FROM users WHERE telegram_id = $1`,
+        [telegramId],
+      );
+
+      const username = userRes.rows[0]?.username
+        ? `@${userRes.rows[0].username}`
+        : "N/A";
+
+      await notifyAdmins(
+        ctx.telegram,
+        `🔔 <b>Deposit Intent (BTC)</b>
+
+👤 <b>User:</b> ${username}
+🆔 <b>Telegram ID:</b> <code>${telegramId}</code>
+
+🏦 <b>Network:</b> Bitcoin
+📍 <b>Address:</b>
+<code>${address}</code>
+
+⏳ User has opened BTC deposit screen.`,
+      );
+
+      ctx.session.depositIntent.BTC = true;
     }
 
     const text =

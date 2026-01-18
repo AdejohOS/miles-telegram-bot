@@ -2,6 +2,7 @@ import { MIN_DEPOSIT_USD } from "../config.js";
 import { Markup } from "telegraf";
 import { pool } from "../db.js";
 import { assignUSDTAddress } from "../utils/addressAssignment.js";
+import { notifyAdmins } from "../utils/helper.js";
 
 export async function depositUSDTTRC20(ctx) {
   const telegramId = ctx.from.id;
@@ -20,6 +21,36 @@ export async function depositUSDTTRC20(ctx) {
       address = res.rows[0].address;
     } else {
       address = await assignUSDTAddress(telegramId);
+    }
+
+    // 🔔 Deposit intent notification (USDT)
+    ctx.session.depositIntent ??= {};
+
+    if (!ctx.session.depositIntent.USDT) {
+      const userRes = await pool.query(
+        `SELECT username FROM users WHERE telegram_id = $1`,
+        [telegramId],
+      );
+
+      const username = userRes.rows[0]?.username
+        ? `@${userRes.rows[0].username}`
+        : "N/A";
+
+      await notifyAdmins(
+        ctx.telegram,
+        `🔔 <b>Deposit Intent (USDT)</b>
+
+👤 <b>User:</b> ${username}
+🆔 <b>Telegram ID:</b> <code>${telegramId}</code>
+
+🌐 <b>Network:</b> TRON (TRC20)
+📍 <b>Address:</b>
+<code>${address}</code>
+
+⏳ User has opened USDT deposit screen.`,
+      );
+
+      ctx.session.depositIntent.USDT = true;
     }
 
     const text =

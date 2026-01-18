@@ -212,6 +212,21 @@ CREATE TABLE deals (
   CONSTRAINT fk_receiver FOREIGN KEY (receiver_id) REFERENCES users(telegram_id)
 );
 
+CREATE TABLE deal_disputes (
+  id SERIAL PRIMARY KEY,
+  deal_id INTEGER NOT NULL,
+  opened_by BIGINT NOT NULL,
+  reason TEXT NOT NULL,
+  status TEXT DEFAULT 'open', -- open | resolved
+  resolution TEXT,            -- sender_refund | receiver_paid
+  admin_id BIGINT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  resolved_at TIMESTAMP,
+
+  FOREIGN KEY (deal_id) REFERENCES deals(id) ON DELETE CASCADE
+);
+
+
 
 
 

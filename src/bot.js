@@ -135,7 +135,7 @@ bot.action("deal_create", async (ctx) => {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback("⬅ Cancel", "deals")],
       ]).reply_markup,
-    }
+    },
   );
 });
 
@@ -152,7 +152,7 @@ bot.action(/deal_accept_(\d+)/, async (ctx) => {
       AND status = 'pending'
     RETURNING sender_id, amount_usd, description
     `,
-    [dealId, receiverId]
+    [dealId, receiverId],
   );
 
   if (!res.rows.length) {
@@ -174,7 +174,7 @@ bot.action(/deal_accept_(\d+)/, async (ctx) => {
         [Markup.button.callback("💰 Complete Deal", `deal_complete_${dealId}`)],
         [Markup.button.callback("📦 View Deals", "deals")],
       ]).reply_markup,
-    }
+    },
   );
 
   // ✅ Update receiver UI
@@ -184,7 +184,7 @@ bot.action(/deal_accept_(\d+)/, async (ctx) => {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback("⬅ Back to Deals", "deals")],
       ]).reply_markup,
-    }
+    },
   );
 });
 
@@ -202,7 +202,7 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
       WHERE id = $1 AND status = 'accepted'
       FOR UPDATE
       `,
-      [id]
+      [id],
     );
 
     if (!res.rows.length) {
@@ -222,7 +222,7 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
           balance_usd = balance_usd - $1
       WHERE telegram_id = $2
       `,
-      [amount_usd, sender_id]
+      [amount_usd, sender_id],
     );
 
     await client.query(
@@ -231,7 +231,7 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
       SET balance_usd = balance_usd + $1
       WHERE telegram_id = $2
       `,
-      [amount_usd, receiver_id]
+      [amount_usd, receiver_id],
     );
 
     /* ===============================
@@ -244,7 +244,7 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
         (telegram_id, amount_usd, type, source, reference)
       VALUES ($1, $2, 'debit', 'deal', $3)
       `,
-      [sender_id, amount_usd, `deal:${id}`]
+      [sender_id, amount_usd, `deal:${id}`],
     );
 
     await client.query(
@@ -253,7 +253,7 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
         (telegram_id, amount_usd, type, source, reference)
       VALUES ($1, $2, 'credit', 'deal', $3)
       `,
-      [receiver_id, amount_usd, `deal:${id}`]
+      [receiver_id, amount_usd, `deal:${id}`],
     );
 
     /* ===============================
@@ -267,7 +267,7 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
           completed_at = NOW()
       WHERE id = $1
       `,
-      [id]
+      [id],
     );
 
     await client.query("COMMIT");
@@ -288,7 +288,7 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
           ],
           [Markup.button.callback("⬅ Back to Deals", "deals")],
         ]).reply_markup,
-      }
+      },
     );
   } catch (e) {
     await client.query("ROLLBACK");
@@ -325,7 +325,7 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
       WHERE id = $1
       FOR UPDATE
       `,
-      [dealId]
+      [dealId],
     );
 
     if (!res.rows.length) {
@@ -363,7 +363,7 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
             sender_rated = true
         WHERE id = $2
         `,
-        [rating, dealId]
+        [rating, dealId],
       );
     }
 
@@ -382,7 +382,7 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
             receiver_rated = true
         WHERE id = $2
         `,
-        [rating, dealId]
+        [rating, dealId],
       );
     }
 
@@ -395,7 +395,7 @@ bot.action(/rate_(\d+)_(\d+)/, async (ctx) => {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback("⬅ Back to Deals", "deals")],
         ]).reply_markup,
-      }
+      },
     );
   } catch (err) {
     await client.query("ROLLBACK");
@@ -419,7 +419,7 @@ bot.action("deal_pending", async (ctx) => {
       AND (sender_id=$1 OR receiver_id=$1)
     ORDER BY created_at DESC
     `,
-    [viewerId]
+    [viewerId],
   );
 
   if (!res.rows.length) {
@@ -478,13 +478,14 @@ bot.action("deal_active", async (ctx) => {
       AND (sender_id=$1 OR receiver_id=$1)
     ORDER BY created_at DESC
     `,
-    [viewerId]
+    [viewerId],
   );
 
   if (!res.rows.length) {
     return ctx.editMessageText("📦 <b>Active Deals</b>\n\nNo active deals.", {
       parse_mode: "HTML",
       reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("⚖ Open Dispute", `deal_dispute_${d.id}`)],
         [Markup.button.callback("⬅ Back", "deals")],
       ]).reply_markup,
     });
@@ -530,7 +531,7 @@ bot.action("deal_completed", async (ctx) => {
       AND (sender_id=$1 OR receiver_id=$1)
     ORDER BY completed_at DESC
     `,
-    [viewerId]
+    [viewerId],
   );
 
   if (!res.rows.length) {
@@ -541,7 +542,7 @@ bot.action("deal_completed", async (ctx) => {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback("⬅ Back", "deals")],
         ]).reply_markup,
-      }
+      },
     );
   }
 
@@ -581,7 +582,7 @@ bot.action(/deal_reject_(\d+)/, async (ctx) => {
         AND status = 'pending'
       FOR UPDATE
       `,
-      [dealId, receiverId]
+      [dealId, receiverId],
     );
 
     if (!res.rows.length) {
@@ -597,7 +598,7 @@ bot.action(/deal_reject_(\d+)/, async (ctx) => {
       SET locked_usd = locked_usd - $1
       WHERE telegram_id = $2
       `,
-      [amount_usd, sender_id]
+      [amount_usd, sender_id],
     );
 
     // ❌ Mark deal rejected
@@ -607,7 +608,7 @@ bot.action(/deal_reject_(\d+)/, async (ctx) => {
       SET status = 'cancelled'
       WHERE id = $1
       `,
-      [dealId]
+      [dealId],
     );
 
     await client.query("COMMIT");
@@ -625,7 +626,7 @@ bot.action(/deal_reject_(\d+)/, async (ctx) => {
           [Markup.button.callback("➕ Create New Deal", "deal_create")],
           [Markup.button.callback("📦 View Deals", "deals")],
         ]).reply_markup,
-      }
+      },
     );
 
     await ctx.editMessageText(
@@ -634,7 +635,7 @@ bot.action(/deal_reject_(\d+)/, async (ctx) => {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback("⬅ Back to Deals", "deals")],
         ]).reply_markup,
-      }
+      },
     );
   } catch (err) {
     await client.query("ROLLBACK");
@@ -662,7 +663,7 @@ bot.action(/deal_cancel_(\d+)/, async (ctx) => {
         AND status = 'pending'
       FOR UPDATE
       `,
-      [dealId, senderId]
+      [dealId, senderId],
     );
 
     if (!res.rows.length) {
@@ -678,7 +679,7 @@ bot.action(/deal_cancel_(\d+)/, async (ctx) => {
       SET locked_usd = locked_usd - $1
       WHERE telegram_id = $2
       `,
-      [amount_usd, senderId]
+      [amount_usd, senderId],
     );
 
     // ❌ Cancel deal
@@ -688,7 +689,7 @@ bot.action(/deal_cancel_(\d+)/, async (ctx) => {
       SET status = 'cancelled'
       WHERE id = $1
       `,
-      [dealId]
+      [dealId],
     );
 
     await client.query("COMMIT");
@@ -696,7 +697,7 @@ bot.action(/deal_cancel_(\d+)/, async (ctx) => {
     await ctx.telegram.sendMessage(
       receiverId,
       `❌ <b>Deal #${dealId} was cancelled</b>\n\nThe sender cancelled the deal.`,
-      { parse_mode: "HTML" }
+      { parse_mode: "HTML" },
     );
 
     await ctx.editMessageText(
@@ -706,7 +707,7 @@ bot.action(/deal_cancel_(\d+)/, async (ctx) => {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback("⬅ Back to Deals", "deals")],
         ]).reply_markup,
-      }
+      },
     );
   } catch (err) {
     await client.query("ROLLBACK");
@@ -736,7 +737,7 @@ bot.action(/^withdraw_currency_(BTC|USDT)$/, async (ctx) => {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback("⬅ Back", "request_withdrawal")],
       ]).reply_markup,
-    }
+    },
   );
 });
 
@@ -783,22 +784,22 @@ bot.action("admin_credit_found_user", adminOnly, async (ctx) => {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback("⬅ Back", "admin_menu")],
       ]).reply_markup,
-    }
+    },
   );
 });
 
 bot.action("admin_withdrawals", adminOnly, adminWithdrawals);
 
 bot.action(/withdraw_approve_(\d+)/, adminOnly, (ctx) =>
-  adminWithdrawApprove(ctx, ctx.match[1])
+  adminWithdrawApprove(ctx, ctx.match[1]),
 );
 
 bot.action(/withdraw_reject_(\d+)/, adminOnly, (ctx) =>
-  adminWithdrawReject(ctx, ctx.match[1])
+  adminWithdrawReject(ctx, ctx.match[1]),
 );
 
 bot.action(/withdraw_paid_(\d+)/, adminOnly, (ctx) =>
-  adminWithdrawPaid(ctx, ctx.match[1])
+  adminWithdrawPaid(ctx, ctx.match[1]),
 );
 
 bot.command("admin_debit", adminOnly, adminDebit);
@@ -808,7 +809,7 @@ bot.action("admin_debit", adminOnly, async (ctx) => {
 
   await ctx.editMessageText(
     "➖ <b>Admin Debit</b>\n\nSend:\n<code>telegram_id amount reason</code>",
-    { parse_mode: "HTML" }
+    { parse_mode: "HTML" },
   );
 });
 

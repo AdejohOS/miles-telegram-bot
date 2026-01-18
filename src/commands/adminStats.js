@@ -4,12 +4,10 @@ import { Markup } from "telegraf";
 export async function adminStats(ctx) {
   await ctx.answerCbQuery?.().catch(() => {});
 
-  const [usersRes, balanceRes, withdrawRes, dealsRes, ordersRes] =
+  const [usersRes, balanceRes, withdrawRes, dealsRes, ordersRes, poolRes] =
     await Promise.all([
-      // 👥 Users
       pool.query(`SELECT COUNT(*) FROM users`),
 
-      // 💰 Balances
       pool.query(`
       SELECT
         COALESCE(SUM(balance_usd), 0) AS total_balance,
@@ -17,7 +15,6 @@ export async function adminStats(ctx) {
       FROM user_balances
     `),
 
-      // 💸 Withdrawals
       pool.query(`
       SELECT
         COUNT(*) FILTER (WHERE status = 'pending') AS pending,
@@ -25,7 +22,6 @@ export async function adminStats(ctx) {
       FROM withdrawal_requests
     `),
 
-      // 🤝 Deals
       pool.query(`
       SELECT
         COUNT(*) FILTER (WHERE status = 'pending') AS pending,
@@ -34,12 +30,20 @@ export async function adminStats(ctx) {
       FROM deals
     `),
 
-      // 🛒 Shop
       pool.query(`
       SELECT
         COUNT(*) FILTER (WHERE status = 'paid') AS orders,
         COALESCE(SUM(price_usd), 0) AS revenue
       FROM shop_orders
+    `),
+
+      pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE currency = 'BTC') AS btc_total,
+        COUNT(*) FILTER (WHERE currency = 'BTC' AND used = false) AS btc_free,
+        COUNT(*) FILTER (WHERE currency = 'USDT') AS usdt_total,
+        COUNT(*) FILTER (WHERE currency = 'USDT' AND used = false) AS usdt_free
+      FROM address_pool
     `),
     ]);
 
@@ -48,11 +52,15 @@ export async function adminStats(ctx) {
   const withdrawals = withdrawRes.rows[0];
   const deals = dealsRes.rows[0];
   const shop = ordersRes.rows[0];
+  const poolStats = poolRes.rows[0];
 
   const text =
     `<b>📊 Admin Statistics</b>\n\n` +
     `<b>👥 Users</b>\n` +
     `• Total users: <b>${users}</b>\n\n` +
+    `<b>🏦 Address Pool</b>\n` +
+    `• BTC: <b>${poolStats.btc_free}</b> free / <b>${poolStats.btc_total}</b> total\n` +
+    `• USDT: <b>${poolStats.usdt_free}</b> free / <b>${poolStats.usdt_total}</b> total\n\n` +
     `<b>💰 Balances (USD)</b>\n` +
     `• Total balance: <b>$${Number(balance.total_balance).toFixed(2)}</b>\n` +
     `• Locked funds: <b>$${Number(balance.total_locked).toFixed(2)}</b>\n\n` +

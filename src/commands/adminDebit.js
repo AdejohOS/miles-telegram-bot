@@ -5,16 +5,31 @@ export async function adminDebit(ctx) {
   if (!ctx.message?.text) return;
 
   const adminId = ctx.from.id;
+  const chatId = ctx.chat.id;
+  const msgId = ctx.session?.adminMessageId;
+
+  if (!msgId) {
+    // Safety fallback (should not normally happen)
+    return ctx.reply("❌ Admin session expired. Please restart admin menu.");
+  }
+
   const parts = ctx.message.text.trim().split(" ");
 
   const backKeyboard = Markup.inlineKeyboard([
     [Markup.button.callback("⬅ Back", "admin_menu")],
   ]);
 
+  const edit = (text) =>
+    ctx.telegram.editMessageText(chatId, msgId, null, text, {
+      parse_mode: "HTML",
+      reply_markup: backKeyboard.reply_markup,
+    });
+
   if (parts.length < 3) {
-    return ctx.reply(
-      "❌ Invalid format.\n\nUse:\ntelegram_id | @username | wallet amount reason",
-      { reply_markup: backKeyboard.reply_markup },
+    return edit(
+      "❌ <b>Invalid format</b>\n\n" +
+        "Use:\n" +
+        "<code>telegram_id | @username | wallet amount reason</code>",
     );
   }
 
@@ -23,9 +38,7 @@ export async function adminDebit(ctx) {
   const reason = parts.slice(2).join(" ");
 
   if (!amountUsd || amountUsd <= 0) {
-    return ctx.reply("❌ Invalid amount.", {
-      reply_markup: backKeyboard.reply_markup,
-    });
+    return edit("❌ <b>Invalid amount.</b>");
   }
 
   let telegramId;
@@ -44,7 +57,7 @@ export async function adminDebit(ctx) {
     telegramId = r.rows[0]?.telegram_id;
   }
 
-  // 3️⃣ Wallet address (BTC / USDT)
+  // 3️⃣ Wallet address
   else {
     const r = await pool.query(
       `SELECT telegram_id FROM user_wallets WHERE address = $1`,
@@ -54,9 +67,7 @@ export async function adminDebit(ctx) {
   }
 
   if (!telegramId) {
-    return ctx.reply("❌ User not found.", {
-      reply_markup: backKeyboard.reply_markup,
-    });
+    return edit("❌ <b>User not found.</b>");
   }
 
   const client = await pool.connect();
@@ -64,7 +75,6 @@ export async function adminDebit(ctx) {
   try {
     await client.query("BEGIN");
 
-    // 🔒 Lock balance
     const balRes = await client.query(
       `
       SELECT balance_usd, locked_usd
@@ -86,7 +96,6 @@ export async function adminDebit(ctx) {
       throw new Error("Insufficient available balance");
     }
 
-    // 💸 Debit
     await client.query(
       `
       UPDATE user_balances
@@ -97,7 +106,6 @@ export async function adminDebit(ctx) {
       [amountUsd, telegramId],
     );
 
-    // 🧾 Log
     await client.query(
       `
       INSERT INTO transactions
@@ -111,13 +119,13 @@ export async function adminDebit(ctx) {
 
     ctx.session = null;
 
-    // ✅ Notify admin
-    await ctx.reply(
-      `✅ Debit successful\n\nUser: ${telegramId}\nAmount: $${amountUsd}`,
-      { reply_markup: backKeyboard.reply_markup },
+    await edit(
+      `✅ <b>Debit Successful</b>\n\n` +
+        `<b>User:</b> ${telegramId}\n` +
+        `<b>Amount:</b> $${amountUsd}`,
     );
 
-    // 🔔 Notify user
+    // Notify user (this is OK to send separately)
     await ctx.telegram.sendMessage(
       telegramId,
       `⚠️ <b>Account Debited</b>\n\n` +
@@ -129,9 +137,7 @@ export async function adminDebit(ctx) {
     await client.query("ROLLBACK");
     console.error("Admin debit failed:", err);
 
-    await ctx.reply("❌ Debit failed: " + err.message, {
-      reply_markup: backKeyboard.reply_markup,
-    });
+    return edit(`❌ <b>Debit failed</b>\n\n${err.message}`);
   } finally {
     client.release();
   }

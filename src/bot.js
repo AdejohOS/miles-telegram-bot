@@ -62,6 +62,12 @@ import { dealReceiver, dealAmount, dealDesc } from "./commands/dealFlow.js";
 import { adminDisputes } from "./commands/adminDisputes.js";
 import { dealDisputeReasonHandle } from "./commands/dealDisputeReasonHandle.js";
 
+import {
+  adminWarnHandle,
+  adminBlockHandle,
+  adminBanHandle,
+} from "./commands/adminSanctionsHandle.js";
+
 dotenv.config();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 

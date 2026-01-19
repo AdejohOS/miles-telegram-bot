@@ -4,7 +4,7 @@ A production-grade **Telegram escrow and wallet management bot** built with **No
 
 This project implements real-world financial workflows including **crypto deposits, escrow deals, withdrawals, disputes, and admin moderation**, with strong emphasis on **data integrity, transactional safety, and non-stacking Telegram UX**.
 
----
+
 
 ## 🚀 Features
 
@@ -21,7 +21,7 @@ This project implements real-world financial workflows including **crypto deposi
 - Transaction history
 - Profile & balance overview
 
----
+
 
 ### 🛡️ Admin Features
 - Admin dashboard with platform statistics
@@ -38,7 +38,7 @@ This project implements real-world financial workflows including **crypto deposi
   - Withdrawal requests
   - Dispute events
 
----
+
 
 ## 🔒 Security & Reliability
 - PostgreSQL transactions (`BEGIN / COMMIT / ROLLBACK`)
@@ -58,7 +58,7 @@ This project implements real-world financial workflows including **crypto deposi
 - Address pool system for wallet assignment
 - Extendable to additional networks or currencies
 
----
+
 
 ## 🧰 Tech Stack
 
@@ -68,7 +68,6 @@ This project implements real-world financial workflows including **crypto deposi
 - **JavaScript (ES Modules)**
 - **PM2** (Process Manager)
 
----
 
 
 ## ⚙️ Installation & Setup

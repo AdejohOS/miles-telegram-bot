@@ -1089,6 +1089,9 @@ bot.on("message", async (ctx, next) => {
     "awaiting_amount",
     "find_user",
     "admin_debit",
+    "admin_warn",
+    "admin_block",
+    "admin_ban",
   ];
 
   if (adminSteps.includes(ctx.session.step)) {
@@ -1109,6 +1112,10 @@ bot.on("message", async (ctx, next) => {
 
   if (ctx.session.step === "dispute_reason")
     return dealDisputeReasonHandle(ctx);
+
+  if (ctx.session.step === "admin_warn") return adminWarnHandle(ctx);
+  if (ctx.session.step === "admin_block") return adminBlockHandle(ctx);
+  if (ctx.session.step === "admin_ban") return adminBanHandle(ctx);
 
   return next();
 });

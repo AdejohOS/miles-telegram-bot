@@ -1,0 +1,100 @@
+import { pool } from "../db.js";
+
+export async function adminWarnHandle(ctx) {
+  if (ctx.session.step !== "admin_warn") return;
+
+  const [telegramId, ...reasonParts] = ctx.message.text.split(" ");
+  const reason = reasonParts.join(" ");
+
+  await pool.query(
+    `
+    INSERT INTO user_sanctions (telegram_id, action, reason, issued_by)
+    VALUES ($1, 'warning', $2, $3)
+    `,
+    [telegramId, reason, ctx.from.id],
+  );
+
+  await pool.query(
+    `
+    UPDATE users
+    SET warnings_count = warnings_count + 1
+    WHERE telegram_id = $1
+    `,
+    [telegramId],
+  );
+
+  await ctx.telegram.sendMessage(
+    telegramId,
+    `⚠️ <b>Account Warning</b>\n\nReason:\n${reason}`,
+    { parse_mode: "HTML" },
+  );
+
+  ctx.session = null;
+  ctx.reply("✅ Warning issued.");
+}
+
+export async function adminBlockHandle(ctx) {
+  if (ctx.session.step !== "admin_block") return;
+
+  const [telegramId, days, ...reasonParts] = ctx.message.text.split(" ");
+  const reason = reasonParts.join(" ");
+
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + Number(days));
+
+  await pool.query(
+    `
+    INSERT INTO user_sanctions
+      (telegram_id, action, reason, issued_by, expires_at)
+    VALUES ($1, 'temp_block', $2, $3, $4)
+    `,
+    [telegramId, reason, ctx.from.id, expiresAt],
+  );
+
+  await pool.query(
+    `UPDATE users SET is_blocked = true WHERE telegram_id = $1`,
+    [telegramId],
+  );
+
+  await ctx.telegram.sendMessage(
+    telegramId,
+    `⏸️ <b>Account Restricted</b>\n\nReason:\n${reason}\n\nRestriction ends on:\n${expiresAt.toDateString()}`,
+    { parse_mode: "HTML" },
+  );
+
+  ctx.session = null;
+  ctx.reply("✅ User temporarily blocked.");
+}
+
+export async function adminBanHandle(ctx) {
+  if (ctx.session.step !== "admin_ban") return;
+
+  const [telegramId, ...reasonParts] = ctx.message.text.split(" ");
+  const reason = reasonParts.join(" ");
+
+  await pool.query(
+    `
+    INSERT INTO user_sanctions (telegram_id, action, reason, issued_by)
+    VALUES ($1, 'ban', $2, $3)
+    `,
+    [telegramId, reason, ctx.from.id],
+  );
+
+  await pool.query(
+    `
+    UPDATE users
+    SET is_banned = true, is_blocked = true
+    WHERE telegram_id = $1
+    `,
+    [telegramId],
+  );
+
+  await ctx.telegram.sendMessage(
+    telegramId,
+    `🚫 <b>Account Banned</b>\n\nReason:\n${reason}`,
+    { parse_mode: "HTML" },
+  );
+
+  ctx.session = null;
+  ctx.reply("✅ User permanently banned.");
+}

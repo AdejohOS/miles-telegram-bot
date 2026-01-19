@@ -71,6 +71,38 @@ bot.use(session());
 bot.start(startCommand);
 
 // deposit
+bot.use(async (ctx, next) => {
+  const telegramId = ctx.from?.id;
+  if (!telegramId) return next();
+
+  const res = await pool.query(
+    `
+    SELECT is_blocked, is_banned
+    FROM users
+    WHERE telegram_id = $1
+    `,
+    [telegramId],
+  );
+
+  if (res.rows.length) {
+    const { is_blocked, is_banned } = res.rows[0];
+
+    if (is_banned) {
+      return ctx.reply(
+        "🚫 Your account has been permanently banned.\n\nContact support if you believe this is an error.",
+      );
+    }
+
+    if (is_blocked) {
+      return ctx.reply(
+        "⏸️ Your account is temporarily restricted.\n\nYou cannot create deals, withdraw, or trade at this time.",
+      );
+    }
+  }
+
+  return next();
+});
+
 bot.action("deposit_menu", depositMenu);
 bot.action("deposit_btc", (ctx) => depositBTC(ctx, "btc"));
 bot.action("deposit_usdt_trc20", (ctx) => depositUSDTTRC20(ctx, "usdt_trc20"));
@@ -969,6 +1001,34 @@ bot.action("admin_debit", adminOnly, async (ctx) => {
     step: "admin_debit",
     adminMessageId: msg.message_id,
   };
+});
+
+// sanctions
+bot.action("admin_warn_user", adminOnly, async (ctx) => {
+  ctx.session = { step: "admin_warn" };
+
+  await ctx.editMessageText(
+    "⚠️ <b>Warn User</b>\n\nSend:\n<code>telegram_id reason</code>",
+    { parse_mode: "HTML" },
+  );
+});
+
+bot.action("admin_block_user", adminOnly, async (ctx) => {
+  ctx.session = { step: "admin_block" };
+
+  await ctx.editMessageText(
+    "⏸️ <b>Temporary Block</b>\n\nSend:\n<code>telegram_id days reason</code>",
+    { parse_mode: "HTML" },
+  );
+});
+
+bot.action("admin_ban_user", adminOnly, async (ctx) => {
+  ctx.session = { step: "admin_ban" };
+
+  await ctx.editMessageText(
+    "🚫 <b>Permanent Ban</b>\n\nSend:\n<code>telegram_id reason</code>",
+    { parse_mode: "HTML" },
+  );
 });
 
 bot.on("message", async (ctx, next) => {

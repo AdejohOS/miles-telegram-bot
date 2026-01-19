@@ -76,39 +76,49 @@ bot.use(session());
 // START
 bot.start(startCommand);
 
-// deposit
 bot.use(async (ctx, next) => {
   const telegramId = ctx.from?.id;
   if (!telegramId) return next();
 
+  // Admin bypass
+  if (ADMIN_IDS.includes(telegramId)) {
+    return next();
+  }
+
   const res = await pool.query(
-    `
-    SELECT is_blocked, is_banned
-    FROM users
-    WHERE telegram_id = $1
-    `,
+    `SELECT is_blocked, is_banned FROM users WHERE telegram_id = $1`,
     [telegramId],
   );
 
-  if (res.rows.length) {
-    const { is_blocked, is_banned } = res.rows[0];
+  if (!res.rows.length) return next();
 
-    if (is_banned) {
-      return ctx.reply(
-        "🚫 Your account has been permanently banned.\n\nContact support if you believe this is an error.",
-      );
-    }
+  const { is_blocked, is_banned } = res.rows[0];
 
-    if (is_blocked) {
-      return ctx.reply(
-        "⏸️ Your account is temporarily restricted.\n\nYou cannot create deals, withdraw, or trade at this time.",
-      );
+  if (is_banned) {
+    if (ctx.callbackQuery) {
+      return ctx.answerCbQuery("🚫 Account permanently banned", {
+        show_alert: true,
+      });
     }
+    return ctx.reply(
+      "🚫 Your account has been permanently banned.\nContact support.",
+    );
+  }
+
+  if (is_blocked) {
+    if (ctx.callbackQuery) {
+      return ctx.answerCbQuery("⏸️ Account temporarily restricted", {
+        show_alert: true,
+      });
+    }
+    return ctx.reply(
+      "⏸️ Your account is temporarily restricted.\nYou cannot trade right now.",
+    );
   }
 
   return next();
 });
-
+// deposit
 bot.action("deposit_menu", depositMenu);
 bot.action("deposit_btc", (ctx) => depositBTC(ctx, "btc"));
 bot.action("deposit_usdt_trc20", (ctx) => depositUSDTTRC20(ctx, "usdt_trc20"));

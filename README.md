@@ -71,13 +71,16 @@ This project implements real-world financial workflows including **crypto deposi
 ---
 
 
----
-
 ## ⚙️ Installation & Setup
 
-### 1️⃣ Clone Repository
+### Clone Repository
 ```bash
 git clone https://github.com/yourusername/telegram-escrow-bot.git
 cd telegram-escrow-bot
 ```
+
+```bash
+npm install
+```
+
 

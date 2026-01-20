@@ -8,9 +8,6 @@ export async function depositBTC(ctx) {
   const telegramId = ctx.from.id;
 
   try {
-    // ✅ Ensure session exists (CRITICAL FIX)
-    ctx.session ??= {};
-
     const res = await pool.query(
       `
       SELECT address
@@ -28,22 +25,19 @@ export async function depositBTC(ctx) {
       address = await assignBTCAddress(telegramId);
     }
 
-    // 🔔 Deposit intent notification (BTC) — session guarded
-    ctx.session.depositIntent ??= {};
+    // 🔔 ALWAYS notify admins (no session guard)
+    const userRes = await pool.query(
+      `SELECT username FROM users WHERE telegram_id = $1`,
+      [telegramId],
+    );
 
-    if (!ctx.session.depositIntent.BTC) {
-      const userRes = await pool.query(
-        `SELECT username FROM users WHERE telegram_id = $1`,
-        [telegramId],
-      );
+    const username = userRes.rows[0]?.username
+      ? `@${userRes.rows[0].username}`
+      : "N/A";
 
-      const username = userRes.rows[0]?.username
-        ? `@${userRes.rows[0].username}`
-        : "N/A";
-
-      await notifyAdmins(
-        ctx.telegram,
-        `🔔 <b>Deposit Intent (BTC)</b>
+    await notifyAdmins(
+      ctx.telegram,
+      `🔔 <b>Deposit Intent (BTC)</b>
 
 👤 <b>User:</b> ${username}
 🆔 <b>Telegram ID:</b> <code>${telegramId}</code>
@@ -52,12 +46,8 @@ export async function depositBTC(ctx) {
 📍 <b>Address:</b>
 <code>${address}</code>
 
-⏳ User has opened BTC deposit screen.`,
-      );
-
-      // ✅ Mark as notified
-      ctx.session.depositIntent.BTC = true;
-    }
+⏳ User opened BTC deposit screen.`,
+    );
 
     const text =
       `💰 *BTC Deposit*\n\n` +

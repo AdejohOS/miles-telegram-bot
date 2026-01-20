@@ -8,9 +8,6 @@ export async function depositUSDTTRC20(ctx) {
   const telegramId = ctx.from.id;
 
   try {
-    // ✅ CRITICAL: ensure session exists
-    ctx.session ??= {};
-
     const res = await pool.query(
       `
       SELECT address
@@ -28,22 +25,19 @@ export async function depositUSDTTRC20(ctx) {
       address = await assignUSDTAddress(telegramId);
     }
 
-    // 🔔 Deposit intent notification (USDT) — session guarded
-    ctx.session.depositIntent ??= {};
+    // 🔔 ALWAYS notify admins (no session guard)
+    const userRes = await pool.query(
+      `SELECT username FROM users WHERE telegram_id = $1`,
+      [telegramId],
+    );
 
-    if (!ctx.session.depositIntent.USDT) {
-      const userRes = await pool.query(
-        `SELECT username FROM users WHERE telegram_id = $1`,
-        [telegramId],
-      );
+    const username = userRes.rows[0]?.username
+      ? `@${userRes.rows[0].username}`
+      : "N/A";
 
-      const username = userRes.rows[0]?.username
-        ? `@${userRes.rows[0].username}`
-        : "N/A";
-
-      await notifyAdmins(
-        ctx.telegram,
-        `🔔 <b>Deposit Intent (USDT)</b>
+    await notifyAdmins(
+      ctx.telegram,
+      `🔔 <b>Deposit Intent (USDT)</b>
 
 👤 <b>User:</b> ${username}
 🆔 <b>Telegram ID:</b> <code>${telegramId}</code>
@@ -52,12 +46,8 @@ export async function depositUSDTTRC20(ctx) {
 📍 <b>Address:</b>
 <code>${address}</code>
 
-⏳ User has opened USDT deposit screen.`,
-      );
-
-      // ✅ Mark as notified
-      ctx.session.depositIntent.USDT = true;
-    }
+⏳ User opened USDT deposit screen.`,
+    );
 
     const text =
       `💰 *USDT Deposit (TRC20)*\n\n` +

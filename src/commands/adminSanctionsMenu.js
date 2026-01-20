@@ -6,8 +6,12 @@ export async function adminSanctionsMenu(ctx) {
     reply_markup: Markup.inlineKeyboard([
       [Markup.button.callback("⚠️ Warn User", "admin_warn_user")],
       [Markup.button.callback("⏸️ Temporary Block", "admin_block_user")],
-      [Markup.button.callback("🚫 Ban User", "admin_ban_user")],
+
+      [
+        Markup.button.callback("🚫 Ban User", "admin_ban_user"),
+        Markup.button.callback("♻️ Unban / Unblock", "admin_unban_user"),
+      ],
       [Markup.button.callback("⬅ Back", "admin_menu")],
-    ]).reply_markup,
+    ]),
   });
 }

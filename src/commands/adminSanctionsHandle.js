@@ -1,10 +1,18 @@
 import { pool } from "../db.js";
+import { Markup } from "telegraf";
+import { resolveUser } from "../utils/helper.js";
 
+/* =========================
+   WARN USER
+========================= */
 export async function adminWarnHandle(ctx) {
   if (ctx.session.step !== "admin_warn") return;
 
-  const [telegramId, ...reasonParts] = ctx.message.text.split(" ");
+  const [identifier, ...reasonParts] = ctx.message.text.split(" ");
   const reason = reasonParts.join(" ");
+
+  const telegramId = await resolveUser(identifier);
+  if (!telegramId) return ctx.reply("❌ User not found.");
 
   await pool.query(
     `
@@ -15,11 +23,7 @@ export async function adminWarnHandle(ctx) {
   );
 
   await pool.query(
-    `
-    UPDATE users
-    SET warnings_count = warnings_count + 1
-    WHERE telegram_id = $1
-    `,
+    `UPDATE users SET warnings_count = warnings_count + 1 WHERE telegram_id=$1`,
     [telegramId],
   );
 
@@ -30,14 +34,25 @@ export async function adminWarnHandle(ctx) {
   );
 
   ctx.session = null;
-  ctx.reply("✅ Warning issued.");
+
+  await ctx.reply("✅ Warning issued.", {
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback("⬅ Back", "admin_sanctions")],
+    ]),
+  });
 }
 
+/* =========================
+   TEMP BLOCK
+========================= */
 export async function adminBlockHandle(ctx) {
   if (ctx.session.step !== "admin_block") return;
 
-  const [telegramId, days, ...reasonParts] = ctx.message.text.split(" ");
+  const [identifier, days, ...reasonParts] = ctx.message.text.split(" ");
   const reason = reasonParts.join(" ");
+
+  const telegramId = await resolveUser(identifier);
+  if (!telegramId) return ctx.reply("❌ User not found.");
 
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + Number(days));
@@ -58,19 +73,30 @@ export async function adminBlockHandle(ctx) {
 
   await ctx.telegram.sendMessage(
     telegramId,
-    `⏸️ <b>Account Restricted</b>\n\nReason:\n${reason}\n\nRestriction ends on:\n${expiresAt.toDateString()}`,
+    `⏸️ <b>Account Restricted</b>\n\nReason:\n${reason}\n\nEnds: ${expiresAt.toDateString()}`,
     { parse_mode: "HTML" },
   );
 
   ctx.session = null;
-  ctx.reply("✅ User temporarily blocked.");
+
+  await ctx.reply("✅ User temporarily blocked.", {
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback("⬅ Back", "admin_sanctions")],
+    ]),
+  });
 }
 
+/* =========================
+   BAN USER
+========================= */
 export async function adminBanHandle(ctx) {
   if (ctx.session.step !== "admin_ban") return;
 
-  const [telegramId, ...reasonParts] = ctx.message.text.split(" ");
+  const [identifier, ...reasonParts] = ctx.message.text.split(" ");
   const reason = reasonParts.join(" ");
+
+  const telegramId = await resolveUser(identifier);
+  if (!telegramId) return ctx.reply("❌ User not found.");
 
   await pool.query(
     `
@@ -83,7 +109,8 @@ export async function adminBanHandle(ctx) {
   await pool.query(
     `
     UPDATE users
-    SET is_banned = true, is_blocked = true
+    SET is_banned = true,
+        is_blocked = true
     WHERE telegram_id = $1
     `,
     [telegramId],
@@ -96,5 +123,54 @@ export async function adminBanHandle(ctx) {
   );
 
   ctx.session = null;
-  ctx.reply("✅ User permanently banned.");
+
+  await ctx.reply("✅ User permanently banned.", {
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback("⬅ Back", "admin_sanctions")],
+    ]),
+  });
+}
+
+/* =========================
+   UNBAN / UNBLOCK
+========================= */
+export async function adminUnbanHandle(ctx) {
+  if (ctx.session.step !== "admin_unban") return;
+
+  const telegramId = await resolveUser(ctx.message.text.trim());
+  if (!telegramId) return ctx.reply("❌ User not found.");
+
+  await pool.query(
+    `
+    UPDATE users
+    SET is_banned = false,
+        is_blocked = false
+    WHERE telegram_id = $1
+    `,
+    [telegramId],
+  );
+
+  await pool.query(
+    `
+    UPDATE user_sanctions
+    SET resolved_at = NOW()
+    WHERE telegram_id = $1
+      AND resolved_at IS NULL
+    `,
+    [telegramId],
+  );
+
+  await ctx.telegram.sendMessage(
+    telegramId,
+    "♻️ <b>Your account has been restored</b>\n\nYou may now use the platform again.",
+    { parse_mode: "HTML" },
+  );
+
+  ctx.session = null;
+
+  await ctx.reply("✅ User unbanned / unblocked.", {
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback("⬅ Back", "admin_sanctions")],
+    ]),
+  });
 }

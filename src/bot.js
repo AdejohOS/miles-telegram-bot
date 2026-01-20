@@ -66,6 +66,7 @@ import {
   adminWarnHandle,
   adminBlockHandle,
   adminBanHandle,
+  adminUnbanHandle,
 } from "./commands/adminSanctionsHandle.js";
 
 dotenv.config();
@@ -1022,27 +1023,32 @@ bot.action("admin_debit", adminOnly, async (ctx) => {
 // sanctions
 bot.action("admin_warn_user", adminOnly, async (ctx) => {
   ctx.session = { step: "admin_warn" };
-
   await ctx.editMessageText(
-    "⚠️ <b>Warn User</b>\n\nSend:\n<code>telegram_id reason</code>",
+    "⚠️ <b>Warn User</b>\n\nSend:\n<code>@username reason</code> OR <code>telegram_id reason</code>",
     { parse_mode: "HTML" },
   );
 });
 
 bot.action("admin_block_user", adminOnly, async (ctx) => {
   ctx.session = { step: "admin_block" };
-
   await ctx.editMessageText(
-    "⏸️ <b>Temporary Block</b>\n\nSend:\n<code>telegram_id days reason</code>",
+    "⏸️ <b>Temporary Block</b>\n\nSend:\n<code>@username days reason</code>",
     { parse_mode: "HTML" },
   );
 });
 
 bot.action("admin_ban_user", adminOnly, async (ctx) => {
   ctx.session = { step: "admin_ban" };
-
   await ctx.editMessageText(
-    "🚫 <b>Permanent Ban</b>\n\nSend:\n<code>telegram_id reason</code>",
+    "🚫 <b>Ban User</b>\n\nSend:\n<code>@username reason</code>",
+    { parse_mode: "HTML" },
+  );
+});
+
+bot.action("admin_unban_user", adminOnly, async (ctx) => {
+  ctx.session = { step: "admin_unban" };
+  await ctx.editMessageText(
+    "♻️ <b>Unban / Unblock User</b>\n\nSend:\n<code>@username OR telegram_id</code>",
     { parse_mode: "HTML" },
   );
 });
@@ -1108,6 +1114,7 @@ bot.on("message", async (ctx, next) => {
     "admin_warn",
     "admin_block",
     "admin_ban",
+    "admin_unban",
   ];
 
   if (adminSteps.includes(ctx.session.step)) {
@@ -1132,6 +1139,7 @@ bot.on("message", async (ctx, next) => {
   if (ctx.session.step === "admin_warn") return adminWarnHandle(ctx);
   if (ctx.session.step === "admin_block") return adminBlockHandle(ctx);
   if (ctx.session.step === "admin_ban") return adminBanHandle(ctx);
+  if (ctx.session.step === "admin_unban") return adminUnbanHandle(ctx);
 
   return next();
 });

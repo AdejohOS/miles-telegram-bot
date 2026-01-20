@@ -1,6 +1,30 @@
 import { pool } from "../db.js";
 import { Markup } from "telegraf";
-import { resolveUser } from "../utils/helper.js";
+
+/* =========================
+   RESOLVE USER (ID or @username)
+========================= */
+async function resolveUser(identifier) {
+  if (!identifier) return null;
+
+  if (identifier.startsWith("@")) {
+    const res = await pool.query(
+      `SELECT telegram_id FROM users WHERE username = $1`,
+      [identifier.slice(1)],
+    );
+    return res.rows[0]?.telegram_id ?? null;
+  }
+
+  const id = Number(identifier);
+  if (Number.isNaN(id)) return null;
+
+  const res = await pool.query(
+    `SELECT telegram_id FROM users WHERE telegram_id = $1`,
+    [id],
+  );
+
+  return res.rows[0]?.telegram_id ?? null;
+}
 
 /* =========================
    WARN USER
@@ -35,7 +59,7 @@ export async function adminWarnHandle(ctx) {
 
   ctx.session = null;
 
-  await ctx.reply("✅ Warning issued.", {
+  return ctx.reply("✅ Warning issued.", {
     reply_markup: Markup.inlineKeyboard([
       [Markup.button.callback("⬅ Back", "admin_sanctions")],
     ]),
@@ -79,7 +103,7 @@ export async function adminBlockHandle(ctx) {
 
   ctx.session = null;
 
-  await ctx.reply("✅ User temporarily blocked.", {
+  return ctx.reply("✅ User temporarily blocked.", {
     reply_markup: Markup.inlineKeyboard([
       [Markup.button.callback("⬅ Back", "admin_sanctions")],
     ]),
@@ -124,7 +148,7 @@ export async function adminBanHandle(ctx) {
 
   ctx.session = null;
 
-  await ctx.reply("✅ User permanently banned.", {
+  return ctx.reply("✅ User permanently banned.", {
     reply_markup: Markup.inlineKeyboard([
       [Markup.button.callback("⬅ Back", "admin_sanctions")],
     ]),
@@ -150,16 +174,6 @@ export async function adminUnbanHandle(ctx) {
     [telegramId],
   );
 
-  await pool.query(
-    `
-    UPDATE user_sanctions
-    SET resolved_at = NOW()
-    WHERE telegram_id = $1
-      AND resolved_at IS NULL
-    `,
-    [telegramId],
-  );
-
   await ctx.telegram.sendMessage(
     telegramId,
     "♻️ <b>Your account has been restored</b>\n\nYou may now use the platform again.",
@@ -168,7 +182,7 @@ export async function adminUnbanHandle(ctx) {
 
   ctx.session = null;
 
-  await ctx.reply("✅ User unbanned / unblocked.", {
+  return ctx.reply("✅ User unbanned / unblocked.", {
     reply_markup: Markup.inlineKeyboard([
       [Markup.button.callback("⬅ Back", "admin_sanctions")],
     ]),

@@ -1,3 +1,5 @@
+import { Markup } from "telegraf";
+import { pool } from "../db.js";
 export async function adminCreditApprove(ctx) {
   if (ctx.session?.step !== "confirm_credit") {
     return ctx.answerCbQuery("No pending credit.");
@@ -18,7 +20,7 @@ export async function adminCreditApprove(ctx) {
       VALUES ($1, 0)
       ON CONFLICT (telegram_id) DO NOTHING
       `,
-      [creditUserId]
+      [creditUserId],
     );
 
     // 2️⃣ Update balance (REAL money movement)
@@ -29,7 +31,7 @@ export async function adminCreditApprove(ctx) {
           updated_at = NOW()
       WHERE telegram_id = $2
       `,
-      [creditAmountUsd, creditUserId]
+      [creditAmountUsd, creditUserId],
     );
 
     // ✅ 3️⃣ LOG TRANSACTION (THIS IS THE CORRECT SPOT)
@@ -39,7 +41,7 @@ export async function adminCreditApprove(ctx) {
         (telegram_id, amount_usd, type, source, reference)
       VALUES ($1, $2, 'credit', 'deposit', $3)
       `,
-      [creditUserId, creditAmountUsd, `admin:${adminId} (${payoutCurrency})`]
+      [creditUserId, creditAmountUsd, `admin:${adminId} (${payoutCurrency})`],
     );
 
     // 4️⃣ Commit everything together
@@ -55,7 +57,7 @@ export async function adminCreditApprove(ctx) {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback("⬅ Back to Admin Menu", "admin_menu")],
         ]).reply_markup,
-      }
+      },
     );
 
     // User notification
@@ -65,7 +67,7 @@ export async function adminCreditApprove(ctx) {
         `Amount: <b>$${creditAmountUsd}</b>\n` +
         `Source: <b>${payoutCurrency}</b>\n\n` +
         `You can now use your balance.`,
-      { parse_mode: "HTML" }
+      { parse_mode: "HTML" },
     );
   } catch (err) {
     await client.query("ROLLBACK");

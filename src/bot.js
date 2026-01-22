@@ -851,14 +851,15 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
     );
 
     if (!res.rows.length) {
-      throw new Error("Dispute not found or already resolved");
+      throw new Error("Dispute not found");
     }
 
     const { deal_id, sender_id, receiver_id, amount_usd } = res.rows[0];
 
-    /* ===========================
-       ALWAYS UNLOCK ESCROW FIRST
-    ============================ */
+    /* =========================
+       STEP 1: REMOVE FROM ESCROW
+       (money leaves pending)
+    ========================== */
 
     await client.query(
       `
@@ -869,12 +870,12 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
       [amount_usd, sender_id],
     );
 
-    /* ===========================
-       APPLY WINNER LOGIC
-    ============================ */
+    /* =========================
+       STEP 2: PAY THE WINNER
+    ========================== */
 
     if (winner === "receiver") {
-      // Sender loses → Receiver gets paid
+      // Sender loses → receiver gets paid
       await client.query(
         `
         UPDATE user_balances
@@ -884,7 +885,7 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
         [amount_usd, receiver_id],
       );
     } else {
-      // Sender wins → Funds returned
+      // Sender wins → refund sender
       await client.query(
         `
         UPDATE user_balances
@@ -895,9 +896,9 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
       );
     }
 
-    /* ===========================
-       FINALIZE DEAL & DISPUTE
-    ============================ */
+    /* =========================
+       STEP 3: FINALIZE RECORDS
+    ========================== */
 
     await client.query(
       `
@@ -920,39 +921,15 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
       [winner, disputeId],
     );
 
-    /* ===========================
-       OPTIONAL: LOG TRANSACTIONS
-    ============================ */
-
-    if (winner === "receiver") {
-      await client.query(
-        `
-        INSERT INTO transactions
-          (telegram_id, amount_usd, type, source, reference)
-        VALUES ($1, $2, 'credit', 'dispute', $3)
-        `,
-        [receiver_id, amount_usd, `deal:${deal_id}`],
-      );
-    } else {
-      await client.query(
-        `
-        INSERT INTO transactions
-          (telegram_id, amount_usd, type, source, reference)
-        VALUES ($1, $2, 'credit', 'dispute', $3)
-        `,
-        [sender_id, amount_usd, `deal:${deal_id}`],
-      );
-    }
-
     await client.query("COMMIT");
 
-    /* ===========================
-       NOTIFICATIONS
-    ============================ */
+    /* =========================
+       STEP 4: NOTIFY USERS
+    ========================== */
 
     await ctx.telegram.sendMessage(
       sender_id,
-      `⚖ <b>Dispute Resolved</b>\n\nDeal #${deal_id}\nOutcome: ${
+      `⚖ <b>Dispute Resolved</b>\n\nDeal #${deal_id}\nResult: ${
         winner === "sender" ? "✅ You won" : "❌ You lost"
       }`,
       { parse_mode: "HTML" },
@@ -960,7 +937,7 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
 
     await ctx.telegram.sendMessage(
       receiver_id,
-      `⚖ <b>Dispute Resolved</b>\n\nDeal #${deal_id}\nOutcome: ${
+      `⚖ <b>Dispute Resolved</b>\n\nDeal #${deal_id}\nResult: ${
         winner === "receiver" ? "✅ You won" : "❌ You lost"
       }`,
       { parse_mode: "HTML" },
@@ -969,7 +946,7 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
     await ctx.editMessageText("✅ Dispute resolved successfully.");
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error("Dispute resolution failed:", err);
+    console.error("Dispute resolution error:", err);
     await ctx.reply("❌ Failed to resolve dispute.");
   } finally {
     client.release();

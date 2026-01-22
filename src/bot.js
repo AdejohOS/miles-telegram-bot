@@ -859,7 +859,7 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
     const { deal_id, sender_id, receiver_id, amount_usd } = res.rows[0];
 
     /* ===============================
-       REMOVE ESCROW (ONCE)
+       REMOVE ESCROW
     =============================== */
     await client.query(
       `
@@ -870,11 +870,22 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
       [amount_usd, sender_id],
     );
 
-    /* ===============================
-       PAY WINNER ONLY
-    =============================== */
     if (winner === "receiver") {
-      // Sender LOST → receiver gets escrow
+      /* ===============================
+         SENDER LOSES → REAL TRANSFER
+      =============================== */
+
+      // 🔻 Debit sender balance
+      await client.query(
+        `
+        UPDATE user_balances
+        SET balance_usd = balance_usd - $1
+        WHERE telegram_id = $2
+        `,
+        [amount_usd, sender_id],
+      );
+
+      // 🔺 Credit receiver
       await client.query(
         `
         UPDATE user_balances
@@ -888,34 +899,27 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
         `
         INSERT INTO transactions
           (telegram_id, amount_usd, type, source, reference)
-        VALUES ($1, $2, 'credit', 'dispute_win', $3)
+        VALUES
+          ($1, $2, 'debit', 'dispute', $3),
+          ($4, $2, 'credit', 'dispute', $3)
         `,
-        [receiver_id, amount_usd, `deal:${deal_id}`],
+        [sender_id, amount_usd, `deal:${deal_id}`, receiver_id],
       );
     } else {
-      // Sender WON → refund escrow
-      await client.query(
-        `
-        UPDATE user_balances
-        SET balance_usd = balance_usd + $1
-        WHERE telegram_id = $2
-        `,
-        [amount_usd, sender_id],
-      );
+      /* ===============================
+         SENDER WINS → JUST UNLOCK
+      =============================== */
 
       await client.query(
         `
         INSERT INTO transactions
           (telegram_id, amount_usd, type, source, reference)
-        VALUES ($1, $2, 'credit', 'dispute_refund', $3)
+        VALUES ($1, $2, 'release', 'dispute', $3)
         `,
         [sender_id, amount_usd, `deal:${deal_id}`],
       );
     }
 
-    /* ===============================
-       FINALIZE DEAL & DISPUTE
-    =============================== */
     await client.query(
       `
       UPDATE deals
@@ -939,7 +943,6 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
 
     await client.query("COMMIT");
 
-    // 🔔 Notifications
     await ctx.telegram.sendMessage(
       sender_id,
       `⚖ <b>Dispute Resolved</b>\n\nDeal #${deal_id}\nResult: ${

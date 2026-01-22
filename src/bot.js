@@ -827,7 +827,7 @@ bot.action(/deal_dispute_(\d+)/, async (ctx) => {
 bot.action("admin_disputes", adminOnly, adminDisputes);
 
 bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
-  const winner = ctx.match[1];
+  const winner = ctx.match[1]; // sender | receiver
   const disputeId = Number(ctx.match[2]);
 
   const client = await pool.connect();
@@ -859,10 +859,8 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
     const { deal_id, sender_id, receiver_id, amount_usd } = res.rows[0];
 
     /* ===============================
-       ESCROW RESOLUTION (SINGLE SOURCE)
+       REMOVE ESCROW (ONCE)
     =============================== */
-
-    // Always remove escrow
     await client.query(
       `
       UPDATE user_balances
@@ -872,6 +870,9 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
       [amount_usd, sender_id],
     );
 
+    /* ===============================
+       PAY WINNER ONLY
+    =============================== */
     if (winner === "receiver") {
       // Sender LOST → receiver gets escrow
       await client.query(
@@ -887,11 +888,9 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
         `
         INSERT INTO transactions
           (telegram_id, amount_usd, type, source, reference)
-        VALUES
-          ($1, $2, 'debit', 'dispute', $3),
-          ($4, $2, 'credit', 'dispute', $3)
+        VALUES ($1, $2, 'credit', 'dispute_win', $3)
         `,
-        [sender_id, amount_usd, `deal:${deal_id}`, receiver_id],
+        [receiver_id, amount_usd, `deal:${deal_id}`],
       );
     } else {
       // Sender WON → refund escrow
@@ -914,6 +913,9 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
       );
     }
 
+    /* ===============================
+       FINALIZE DEAL & DISPUTE
+    =============================== */
     await client.query(
       `
       UPDATE deals
@@ -937,24 +939,27 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
 
     await client.query("COMMIT");
 
+    // 🔔 Notifications
     await ctx.telegram.sendMessage(
       sender_id,
-      `⚖ Dispute resolved\nDeal #${deal_id}\nResult: ${
+      `⚖ <b>Dispute Resolved</b>\n\nDeal #${deal_id}\nResult: ${
         winner === "sender" ? "You won" : "You lost"
       }`,
+      { parse_mode: "HTML" },
     );
 
     await ctx.telegram.sendMessage(
       receiver_id,
-      `⚖ Dispute resolved\nDeal #${deal_id}\nResult: ${
+      `⚖ <b>Dispute Resolved</b>\n\nDeal #${deal_id}\nResult: ${
         winner === "receiver" ? "You won" : "You lost"
       }`,
+      { parse_mode: "HTML" },
     );
 
     await ctx.editMessageText("✅ Dispute resolved successfully.");
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
+    console.error("Dispute resolution failed:", err);
     await ctx.reply("❌ Failed to resolve dispute.");
   } finally {
     client.release();

@@ -245,6 +245,8 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
   const id = ctx.match[1];
   const client = await pool.connect();
 
+  let sender_id, receiver_id, amount_usd;
+
   try {
     await client.query("BEGIN");
 
@@ -262,12 +264,13 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
       throw new Error("Deal not valid or already completed");
     }
 
-    const { sender_id, receiver_id, amount_usd } = res.rows[0];
+    ({ sender_id, receiver_id, amount_usd } = res.rows[0]);
 
     /* ===============================
-       MOVE MONEY
+       MOVE MONEY (ESCROW → RECEIVER)
     =============================== */
 
+    // Sender: remove locked + balance
     await client.query(
       `
       UPDATE user_balances
@@ -278,6 +281,7 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
       [amount_usd, sender_id],
     );
 
+    // Receiver: credit balance
     await client.query(
       `
       UPDATE user_balances
@@ -288,25 +292,18 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
     );
 
     /* ===============================
-       LOG TRANSACTIONS
+       TRANSACTION LOGS
     =============================== */
 
     await client.query(
       `
       INSERT INTO transactions
         (telegram_id, amount_usd, type, source, reference)
-      VALUES ($1, $2, 'debit', 'deal', $3)
+      VALUES
+        ($1, $2, 'debit', 'deal', $3),
+        ($4, $2, 'credit', 'deal', $3)
       `,
-      [sender_id, amount_usd, `deal:${id}`],
-    );
-
-    await client.query(
-      `
-      INSERT INTO transactions
-        (telegram_id, amount_usd, type, source, reference)
-      VALUES ($1, $2, 'credit', 'deal', $3)
-      `,
-      [receiver_id, amount_usd, `deal:${id}`],
+      [sender_id, amount_usd, `deal:${id}`, receiver_id],
     );
 
     /* ===============================
@@ -325,7 +322,31 @@ bot.action(/deal_complete_(\d+)/, async (ctx) => {
 
     await client.query("COMMIT");
 
-    // ⭐ SINGLE EDIT — THIS IS IMPORTANT
+    /* ===============================
+       🔔 NOTIFY RECEIVER (NEW MESSAGE)
+    =============================== */
+
+    await ctx.telegram.sendMessage(
+      receiver_id,
+      `💰 <b>Deal Completed</b>
+
+Deal ID: <b>#${id}</b>
+Amount received: <b>$${amount_usd}</b>
+
+✅ The sender has completed the deal.
+The funds are now available in your balance.`,
+      {
+        parse_mode: "HTML",
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback("📦 View Deals", "deals")],
+        ]).reply_markup,
+      },
+    );
+
+    /* ===============================
+       ✅ UPDATE SENDER UI (EDIT)
+    =============================== */
+
     await ctx.editMessageText(
       "💰 Deal completed. Receiver paid.\n\n⭐ Please rate your experience:",
       {

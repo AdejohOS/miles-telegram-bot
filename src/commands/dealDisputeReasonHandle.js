@@ -78,7 +78,7 @@ Please wait while an admin reviews the case.`,
        🔔 NOTIFY ADMINS (unchanged)
     ============================ */
     await notifyAdmins(
-      ctx.bot,
+      ctx.telegram,
       `⚖ <b>New Dispute Opened</b>
 
 Dispute ID: <b>#${disputeId}</b>

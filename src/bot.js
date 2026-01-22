@@ -713,8 +713,10 @@ bot.action(/deal_reject_(\d+)/, async (ctx) => {
 });
 
 bot.action(/deal_cancel_(\d+)/, async (ctx) => {
+  await ctx.answerCbQuery();
+
   const dealId = Number(ctx.match[1]);
-  const senderId = ctx.from.id;
+  const senderId = Number(ctx.from.id);
 
   const client = await pool.connect();
 
@@ -723,7 +725,7 @@ bot.action(/deal_cancel_(\d+)/, async (ctx) => {
 
     const res = await client.query(
       `
-      SELECT amount_usd
+      SELECT receiver_id, amount_usd
       FROM deals
       WHERE id = $1
         AND sender_id = $2
@@ -737,7 +739,7 @@ bot.action(/deal_cancel_(\d+)/, async (ctx) => {
       throw new Error("Deal cannot be cancelled");
     }
 
-    const { amount_usd } = res.rows[0];
+    const { receiver_id, amount_usd } = res.rows[0];
 
     // 🔓 Unlock sender funds
     await client.query(
@@ -761,14 +763,25 @@ bot.action(/deal_cancel_(\d+)/, async (ctx) => {
 
     await client.query("COMMIT");
 
+    /* ======================
+       🔔 NOTIFY RECEIVER
+    ====================== */
     await ctx.telegram.sendMessage(
-      receiverId,
-      `❌ <b>Deal #${dealId} was cancelled</b>\n\nThe sender cancelled the deal.`,
-      { parse_mode: "HTML" },
+      receiver_id,
+      `❌ <b>Deal Cancelled</b>\n\nDeal #${dealId} was cancelled by the sender.`,
+      {
+        parse_mode: "HTML",
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback("📦 View Deals", "deals")],
+        ]).reply_markup,
+      },
     );
 
+    /* ======================
+       🔄 UPDATE SENDER UI
+    ====================== */
     await ctx.editMessageText(
-      "🛑 <b>Deal cancelled</b>\n\nYour locked funds have been returned.",
+      "🛑 <b>Deal Cancelled</b>\n\nYour locked funds have been released.",
       {
         parse_mode: "HTML",
         reply_markup: Markup.inlineKeyboard([
@@ -778,7 +791,11 @@ bot.action(/deal_cancel_(\d+)/, async (ctx) => {
     );
   } catch (err) {
     await client.query("ROLLBACK");
-    await ctx.answerCbQuery("❌ Unable to cancel deal.");
+    console.error("Cancel deal error:", err);
+
+    await ctx.answerCbQuery("❌ Unable to cancel deal.", {
+      show_alert: true,
+    });
   } finally {
     client.release();
   }

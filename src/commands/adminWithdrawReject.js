@@ -1,3 +1,4 @@
+// commands/adminWithdrawReject.js
 import { pool } from "../db.js";
 
 export async function adminWithdrawReject(ctx, id) {
@@ -6,16 +7,14 @@ export async function adminWithdrawReject(ctx, id) {
   try {
     await client.query("BEGIN");
 
-    // 🔒 Lock withdrawal row
     const res = await client.query(
       `
       SELECT telegram_id, amount_usd
       FROM withdrawal_requests
-      WHERE id = $1
-        AND status = 'pending'
+      WHERE id = $1 AND status = 'pending'
       FOR UPDATE
       `,
-      [id]
+      [id],
     );
 
     if (!res.rows.length) {
@@ -24,41 +23,38 @@ export async function adminWithdrawReject(ctx, id) {
 
     const { telegram_id, amount_usd } = res.rows[0];
 
-    // 🔓 Unlock USD back to user
+    // 🔓 Unlock funds
     await client.query(
       `
       UPDATE user_balances
       SET locked_usd = locked_usd - $1
       WHERE telegram_id = $2
       `,
-      [amount_usd, telegram_id]
+      [amount_usd, telegram_id],
     );
 
-    // ❌ Mark withdrawal rejected
     await client.query(
       `
       UPDATE withdrawal_requests
-      SET status = 'rejected',
-          processed_at = NOW()
+      SET status = 'rejected'
       WHERE id = $1
       `,
-      [id]
+      [id],
     );
 
     await client.query("COMMIT");
 
-    await ctx.editMessageText(`❌ Withdrawal #${id} rejected.\nUSD unlocked.`);
     await ctx.telegram.sendMessage(
       telegram_id,
-      `❌ <b>Withdrawal Rejected</b>\n\n` +
-        `💵 Amount: $${amount_usd}\n` +
-        `Your funds have been returned to your balance.`,
-      { parse_mode: "HTML" }
+      `❌ <b>Withdrawal Rejected</b>\n\n💵 Amount: <b>$${amount_usd}</b>\n\nYour funds have been returned to your balance.`,
+      { parse_mode: "HTML" },
     );
+
+    await ctx.answerCbQuery("❌ Withdrawal rejected");
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error("Reject withdrawal failed:", err);
-    await ctx.reply("❌ Reject failed: " + err.message);
+    console.error(err);
+    await ctx.answerCbQuery("❌ Rejection failed", { show_alert: true });
   } finally {
     client.release();
   }

@@ -55,7 +55,7 @@ export async function adminWithdrawals(ctx) {
 
     if (w.status === "approved") {
       return [
-        Markup.button.callback(`💰 Paid #${w.id}`, `withdraw_paid_${w.id}`),
+        Markup.button.callback(`💰 Pay #${w.id}`, `withdraw_paid_${w.id}`),
       ];
     }
   });

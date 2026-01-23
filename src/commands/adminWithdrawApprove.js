@@ -1,5 +1,6 @@
 // commands/adminWithdrawApprove.js
 import { pool } from "../db.js";
+import { adminWithdrawals } from "./adminWithdrawals.js";
 
 export async function adminWithdrawApprove(ctx, id) {
   const client = await pool.connect();
@@ -32,6 +33,7 @@ export async function adminWithdrawApprove(ctx, id) {
     );
 
     await ctx.answerCbQuery("✅ Withdrawal approved");
+    return adminWithdrawals(ctx);
   } catch (err) {
     await client.query("ROLLBACK");
     console.error(err);

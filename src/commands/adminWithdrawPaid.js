@@ -1,5 +1,6 @@
 // commands/adminWithdrawPaid.js
 import { pool } from "../db.js";
+import { adminWithdrawals } from "./adminWithdrawals.js";
 
 export async function adminWithdrawPaid(ctx, id) {
   const client = await pool.connect();
@@ -63,6 +64,7 @@ export async function adminWithdrawPaid(ctx, id) {
     );
 
     await ctx.answerCbQuery("💰 Marked as paid");
+    return adminWithdrawals(ctx);
   } catch (err) {
     await client.query("ROLLBACK");
     console.error(err);

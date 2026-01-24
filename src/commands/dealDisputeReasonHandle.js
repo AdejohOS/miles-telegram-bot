@@ -77,13 +77,24 @@ Please wait while an admin reviews the case.`,
     /* ============================
        🔔 NOTIFY ADMINS (unchanged)
     ============================ */
+
+    const userRes = await pool.query(
+      `SELECT username FROM users WHERE telegram_id = $1`,
+      [openedBy],
+    );
+
+    const username = userRes.rows[0]?.username
+      ? `@${userRes.rows[0].username}`
+      : "N/A";
+
     await notifyAdmins(
       ctx.telegram,
       `⚖ <b>New Dispute Opened</b>
 
 Dispute ID: <b>#${disputeId}</b>
 Deal ID: <b>#${dealId}</b>
-Opened by: <code>${openedBy}</code>
+Opened by: <b>${username}</b>
+Telegram ID: <code>${openedBy}</code>
 Amount: <b>$${amount_usd}</b>
 
 📝 Reason:

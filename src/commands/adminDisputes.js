@@ -59,9 +59,12 @@ export async function adminDisputes(ctx) {
       .join("\n\n");
 
   const buttons = res.rows.map((d) => [
-    Markup.button.callback("✅ Pay Sender", `dispute_sender_${d.dispute_id}`),
     Markup.button.callback(
-      "💰 Pay Receiver",
+      `✅ Pay Sender #${d.dispute_id}`,
+      `dispute_sender_${d.dispute_id}`,
+    ),
+    Markup.button.callback(
+      `💰 Pay Receiver #${d.dispute_id}`,
       `dispute_receiver_${d.dispute_id}`,
     ),
   ]);

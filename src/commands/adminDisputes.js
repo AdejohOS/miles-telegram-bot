@@ -7,13 +7,22 @@ export async function adminDisputes(ctx) {
     SELECT 
       d.id AS dispute_id,
       dl.id AS deal_id,
+
       dl.sender_id,
+      us.username  AS sender_username,
+
       dl.receiver_id,
+      ur.username  AS receiver_username,
+
       dl.description,
       d.reason,
       d.created_at
     FROM deal_disputes d
     JOIN deals dl ON dl.id = d.deal_id
+
+    LEFT JOIN users us ON us.telegram_id = dl.sender_id
+    LEFT JOIN users ur ON ur.telegram_id = dl.receiver_id
+
     WHERE d.status = 'open'
     ORDER BY d.created_at ASC
     `,
@@ -30,16 +39,23 @@ export async function adminDisputes(ctx) {
   const text =
     "⚖ <b>Open Disputes</b>\n\n" +
     res.rows
-      .map(
-        (d) =>
+      .map((d) => {
+        const senderName = d.sender_username ? `@${d.sender_username}` : "N/A";
+
+        const receiverName = d.receiver_username
+          ? `@${d.receiver_username}`
+          : "N/A";
+
+        return (
           `<b>Dispute #${d.dispute_id}</b>\n` +
           `Deal: #${d.deal_id}\n` +
-          `Sender: <code>${d.sender_id}</code>\n` +
-          `Receiver: <code>${d.receiver_id}</code>\n` +
-          `📝 Deal: ${d.description}\n` +
-          `❗ Issue: ${d.reason}\n` +
-          `📅 ${new Date(d.created_at).toLocaleString()}`,
-      )
+          `👤 Sender: ${senderName} (<code>${d.sender_id}</code>)\n` +
+          `👤 Receiver: ${receiverName} (<code>${d.receiver_id}</code>)\n\n` +
+          `📝 <b>Deal</b>\n${d.description}\n\n` +
+          `❗ <b>Issue</b>\n${d.reason}\n` +
+          `📅 ${new Date(d.created_at).toLocaleString()}`
+        );
+      })
       .join("\n\n");
 
   const buttons = res.rows.map((d) => [

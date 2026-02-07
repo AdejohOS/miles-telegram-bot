@@ -12,17 +12,17 @@ export async function supportCommand(ctx) {
           [
             Markup.button.url(
               "💬 Chat with Support",
-              "https://t.me/miles_Trader_support"
+              "https://t.me/miles_Trader_support",
             ),
           ],
           [Markup.button.callback("⬅ Back to Menu", "main_menu")],
         ]),
-      }
+      },
     );
   } catch (err) {
     await ctx.reply(
-      "🆘 *Support*\n\nChat with support:\n👉 https://t.me/D_dls25",
-      { parse_mode: "Markdown" }
+      "🆘 *Support*\n\nChat with support:\n👉 https://t.me/miles_trader_spt",
+      { parse_mode: "Markdown" },
     );
   }
 }

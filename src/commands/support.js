@@ -12,7 +12,7 @@ export async function supportCommand(ctx) {
           [
             Markup.button.url(
               "💬 Chat with Support",
-              "https://t.me/miles_Trader_support",
+              "https://t.me/miles_trader_spt",
             ),
           ],
           [Markup.button.callback("⬅ Back to Menu", "main_menu")],

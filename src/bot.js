@@ -862,7 +862,8 @@ bot.action(/deal_dispute_(\d+)/, async (ctx) => {
   );
 });
 
-bot.action("admin_disputes", adminOnly, adminDisputes);
+bot.action(/^admin_disputes(?:_(\d+))?$/, adminOnly, adminDisputes);
+bot.action("ignore", (ctx) => ctx.answerCbQuery());
 
 bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
   const winner = ctx.match[1]; // sender | receiver

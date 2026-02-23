@@ -2,6 +2,25 @@ import { pool } from "../db.js";
 import { Markup } from "telegraf";
 
 export async function adminDisputes(ctx) {
+  const pageSize = 5;
+
+  // Get page from callback like admin_disputes_2
+  const page = Number(ctx.match?.[1] || 1);
+  const offset = (page - 1) * pageSize;
+
+  /* =========================
+     COUNT TOTAL DISPUTES
+  ========================= */
+  const countRes = await pool.query(
+    `SELECT COUNT(*) FROM deal_disputes WHERE status = 'open'`,
+  );
+
+  const total = Number(countRes.rows[0].count);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  /* =========================
+     FETCH PAGE DATA
+  ========================= */
   const res = await pool.query(
     `
     SELECT 
@@ -25,8 +44,9 @@ export async function adminDisputes(ctx) {
 
     WHERE d.status = 'open'
     ORDER BY d.created_at ASC
-    LIMIT 5
+    LIMIT $1 OFFSET $2
     `,
+    [pageSize, offset],
   );
 
   if (!res.rows.length) {
@@ -37,11 +57,18 @@ export async function adminDisputes(ctx) {
     });
   }
 
+  /* =========================
+     SAFE HTML ESCAPE
+  ========================= */
   const escapeHTML = (text = "") =>
     text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+  /* =========================
+     BUILD MESSAGE
+  ========================= */
   const text =
-    "⚖ <b>Open Disputes</b>\n\n" +
+    `⚖ <b>Open Disputes</b>\n` +
+    `<i>Page ${page} of ${totalPages}</i>\n\n` +
     res.rows
       .map((d) => {
         const senderName = d.sender_username
@@ -67,6 +94,9 @@ export async function adminDisputes(ctx) {
       })
       .join("\n\n");
 
+  /* =========================
+     ACTION BUTTONS
+  ========================= */
   const buttons = res.rows.map((d) => [
     Markup.button.callback(
       `✅ Pay Sender #${d.dispute_id}`,
@@ -77,6 +107,29 @@ export async function adminDisputes(ctx) {
       `dispute_receiver_${d.dispute_id}`,
     ),
   ]);
+
+  /* =========================
+     PAGINATION BUTTONS
+  ========================= */
+  const paginationRow = [];
+
+  if (page > 1) {
+    paginationRow.push(
+      Markup.button.callback("⬅ Prev", `admin_disputes_${page - 1}`),
+    );
+  }
+
+  paginationRow.push(
+    Markup.button.callback(`Page ${page}/${totalPages}`, "ignore"),
+  );
+
+  if (page < totalPages) {
+    paginationRow.push(
+      Markup.button.callback("Next ➡", `admin_disputes_${page + 1}`),
+    );
+  }
+
+  buttons.push(paginationRow);
 
   buttons.push([Markup.button.callback("⬅ Back", "admin_menu")]);
 

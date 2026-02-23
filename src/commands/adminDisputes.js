@@ -36,23 +36,31 @@ export async function adminDisputes(ctx) {
     });
   }
 
+  const escapeHTML = (text = "") =>
+    text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
   const text =
     "⚖ <b>Open Disputes</b>\n\n" +
     res.rows
       .map((d) => {
-        const senderName = d.sender_username ? `@${d.sender_username}` : "N/A";
+        const senderName = d.sender_username
+          ? `@${escapeHTML(d.sender_username)}`
+          : "N/A";
 
         const receiverName = d.receiver_username
-          ? `@${d.receiver_username}`
+          ? `@${escapeHTML(d.receiver_username)}`
           : "N/A";
+
+        const safeDescription = escapeHTML(d.description);
+        const safeReason = escapeHTML(d.reason);
 
         return (
           `<b>Dispute #${d.dispute_id}</b>\n` +
           `Deal: #${d.deal_id}\n` +
           `👤 Sender: ${senderName} (<code>${d.sender_id}</code>)\n` +
           `👤 Receiver: ${receiverName} (<code>${d.receiver_id}</code>)\n\n` +
-          `📝 <b>Deal</b>\n${d.description}\n\n` +
-          `❗ <b>Issue</b>\n${d.reason}\n` +
+          `📝 <b>Deal</b>\n${safeDescription}\n\n` +
+          `❗ <b>Issue</b>\n${safeReason}\n` +
           `📅 ${new Date(d.created_at).toLocaleString()}`
         );
       })

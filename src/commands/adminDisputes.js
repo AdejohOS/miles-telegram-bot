@@ -25,6 +25,7 @@ export async function adminDisputes(ctx) {
 
     WHERE d.status = 'open'
     ORDER BY d.created_at ASC
+    LIMIT 5
     `,
   );
 

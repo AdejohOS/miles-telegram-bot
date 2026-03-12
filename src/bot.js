@@ -1020,9 +1020,13 @@ bot.action(/^withdraw_currency_(BTC|USDT)$/, async (ctx) => {
 
   ctx.session.step = "withdraw_amount";
   ctx.session.network = network;
+  const MIN_WITHDRAWAL_USD = 50;
 
   await ctx.editMessageText(
-    `💁 *Withdrawal*\n\nNetwork: *${network}*\n\nEnter amount in *USD*:`,
+    `💁 *Withdrawal*\n\n` +
+      `Network: *${network}*\n\n` +
+      `💵 *Minimum withdrawal:* $${MIN_WITHDRAWAL_USD}\n\n` +
+      `Enter amount in *USD*:`,
     {
       parse_mode: "Markdown",
       reply_markup: Markup.inlineKeyboard([

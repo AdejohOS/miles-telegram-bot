@@ -12,7 +12,7 @@ export async function supportCommand(ctx) {
           [
             Markup.button.url(
               "💬 Chat with Support",
-              "https://t.me/miles_trader_spt",
+              "https://t.me/Miles_trader_suport",
             ),
           ],
           [Markup.button.callback("⬅ Back to Menu", "main_menu")],
@@ -21,7 +21,7 @@ export async function supportCommand(ctx) {
     );
   } catch (err) {
     await ctx.reply(
-      "🆘 *Support*\n\nChat with support:\n👉 https://t.me/miles_trader_spt",
+      "🆘 *Support*\n\nChat with support:\n👉 https://t.me/Miles_trader_suport",
       { parse_mode: "Markdown" },
     );
   }

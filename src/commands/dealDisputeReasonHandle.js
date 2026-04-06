@@ -17,7 +17,7 @@ export async function dealDisputeReasonHandle(ctx) {
     // Get deal + participants
     const dealRes = await client.query(
       `
-      SELECT sender_id, receiver_id, amount_usd, description
+      SELECT sender_id, receiver_id, amount_usd, description, status
       FROM deals
       WHERE id = $1
       FOR UPDATE
@@ -29,7 +29,27 @@ export async function dealDisputeReasonHandle(ctx) {
       throw new Error("Deal not found");
     }
 
-    const { sender_id, receiver_id, amount_usd, description } = dealRes.rows[0];
+    const { sender_id, receiver_id, amount_usd, description, status } =
+      dealRes.rows[0];
+
+    if (status !== "accepted") {
+      throw new Error("Deal is not eligible for dispute");
+    }
+
+    const existingRes = await client.query(
+      `
+      SELECT id
+      FROM deal_disputes
+      WHERE deal_id = $1
+        AND status = 'open'
+      LIMIT 1
+      `,
+      [dealId],
+    );
+
+    if (existingRes.rows.length) {
+      throw new Error("A dispute is already open for this deal");
+    }
 
     const otherParty = openedBy === sender_id ? receiver_id : sender_id;
 
@@ -47,7 +67,7 @@ export async function dealDisputeReasonHandle(ctx) {
 
     await client.query("COMMIT");
 
-    ctx.session = null;
+    ctx.session = {};
 
     /* ============================
        🔔 NOTIFY OTHER PARTY
@@ -69,14 +89,9 @@ Please wait while an admin reviews the case.`,
         parse_mode: "HTML",
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback("📦 View Deal", "deal_active")],
-          [Markup.button.callback("⚖ My Disputes", "deal_disputes")],
         ]).reply_markup,
       },
     );
-
-    /* ============================
-       🔔 NOTIFY ADMINS (unchanged)
-    ============================ */
 
     const userRes = await pool.query(
       `SELECT username FROM users WHERE telegram_id = $1`,
@@ -104,9 +119,6 @@ Amount: <b>$${amount_usd}</b>
       ]).reply_markup,
     );
 
-    /* ============================
-       ✅ CONFIRM TO OPENER
-    ============================ */
     await ctx.reply(
       "⚖ <b>Dispute opened successfully</b>\n\n" +
         "The other party and admins have been notified.\n" +

@@ -823,27 +823,50 @@ bot.action(/deal_cancel_(\d+)/, async (ctx) => {
 });
 
 bot.action(/deal_dispute_(\d+)/, async (ctx) => {
+  await ctx.answerCbQuery().catch(() => {});
+
   const dealId = Number(ctx.match[1]);
   const userId = Number(ctx.from.id);
 
   const res = await pool.query(
     `
-    SELECT sender_id, receiver_id, status
-    FROM deals
-    WHERE id = $1 AND status = 'accepted'
+    SELECT
+      d.sender_id,
+      d.receiver_id,
+      d.status,
+      EXISTS (
+        SELECT 1
+        FROM deal_disputes dd
+        WHERE dd.deal_id = d.id
+          AND dd.status = 'open'
+      ) AS has_open_dispute
+    FROM deals d
+    WHERE d.id = $1
+      AND d.status = 'accepted'
     `,
     [dealId],
   );
 
   if (!res.rows.length) {
-    return ctx.answerCbQuery("❌ Deal not eligible for dispute.");
+    return ctx.answerCbQuery("❌ Deal not eligible for dispute.", {
+      show_alert: true,
+    });
   }
 
   const senderId = Number(res.rows[0].sender_id);
   const receiverId = Number(res.rows[0].receiver_id);
+  const hasOpenDispute = res.rows[0].has_open_dispute;
 
   if (userId !== senderId && userId !== receiverId) {
-    return ctx.answerCbQuery("❌ Not your deal.");
+    return ctx.answerCbQuery("❌ Not your deal.", {
+      show_alert: true,
+    });
+  }
+
+  if (hasOpenDispute) {
+    return ctx.answerCbQuery("⚠️ A dispute is already open for this deal.", {
+      show_alert: true,
+    });
   }
 
   ctx.session = {
@@ -866,6 +889,8 @@ bot.action(/^admin_disputes(?:_(\d+))?$/, adminOnly, adminDisputes);
 bot.action("ignore", (ctx) => ctx.answerCbQuery());
 
 bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
+  await ctx.answerCbQuery().catch(() => {});
+
   const winner = ctx.match[1]; // sender | receiver
   const disputeId = Number(ctx.match[2]);
 
@@ -892,7 +917,17 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
     );
 
     if (!res.rows.length) {
-      throw new Error("Dispute not found or already resolved");
+      await client.query("ROLLBACK");
+
+      return ctx.editMessageText(
+        "⚖ <b>This dispute has already been resolved or is no longer available.</b>",
+        {
+          parse_mode: "HTML",
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.callback("⬅ Back to Disputes", "admin_disputes")],
+          ]).reply_markup,
+        },
+      );
     }
 
     const { deal_id, sender_id, receiver_id, amount_usd } = res.rows[0];
@@ -914,7 +949,7 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
          SENDER LOSES → REAL TRANSFER
       =============================== */
 
-      // 🔻 Debit sender balance
+      // Debit sender balance
       await client.query(
         `
         UPDATE user_balances
@@ -924,7 +959,7 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
         [amount_usd, sender_id],
       );
 
-      // 🔺 Credit receiver
+      // Credit receiver
       await client.query(
         `
         UPDATE user_balances
@@ -948,7 +983,6 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
       /* ===============================
          SENDER WINS → JUST UNLOCK
       =============================== */
-
       await client.query(
         `
         INSERT INTO transactions
@@ -998,11 +1032,20 @@ bot.action(/dispute_(sender|receiver)_(\d+)/, adminOnly, async (ctx) => {
       { parse_mode: "HTML" },
     );
 
-    await ctx.editMessageText("✅ Dispute resolved successfully.");
+    await ctx.editMessageText("✅ Dispute resolved successfully.", {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Back to Disputes", "admin_disputes")],
+      ]).reply_markup,
+    });
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("Dispute resolution failed:", err);
-    await ctx.reply("❌ Failed to resolve dispute.");
+
+    await ctx.editMessageText("❌ Failed to resolve dispute.", {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("⬅ Back to Disputes", "admin_disputes")],
+      ]).reply_markup,
+    });
   } finally {
     client.release();
   }

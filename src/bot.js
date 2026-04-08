@@ -1092,7 +1092,9 @@ bot.action("admin_menu", adminOnly, adminMenu);
 
 bot.action("admin_stats", adminOnly, adminStats);
 
-bot.action("admin_shop_menu", adminOnly, adminShopMenu);
+bot.action(/^admin_shop_menu(?:_(\d+))?$/, adminOnly, adminShopMenu);
+bot.action("ignore", (ctx) => ctx.answerCbQuery());
+
 bot.action("admin_add_item", adminOnly, async (ctx) => {
   ctx.session = { step: "add_item_title" };
   await ctx.editMessageText("Enter item title:");

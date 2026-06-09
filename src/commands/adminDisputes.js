@@ -79,8 +79,12 @@ export async function adminDisputes(ctx) {
           ? `@${escapeHTML(d.receiver_username)}`
           : "N/A";
 
-        const safeDescription = escapeHTML(d.description);
-        const safeReason = escapeHTML(d.reason);
+        const truncate = (text = "", max = 250) =>
+          text.length > max ? text.slice(0, max) + "..." : text;
+
+        const safeDescription = truncate(escapeHTML(d.description), 200);
+
+        const safeReason = truncate(escapeHTML(d.reason), 300);
 
         return (
           `<b>Dispute #${d.dispute_id}</b>\n` +

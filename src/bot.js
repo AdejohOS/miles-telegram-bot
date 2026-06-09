@@ -571,11 +571,16 @@ bot.action("deal_active", async (ctx) => {
         const role =
           Number(d.sender_id) === viewerId ? "📤 You sent" : "📥 You received";
 
+        const desc =
+          d.description.length > 150
+            ? d.description.slice(0, 150) + "..."
+            : d.description;
+
         return (
           `<b>#${d.id}</b>\n` +
           `${role}\n` +
           `💵 $${d.amount_usd}\n` +
-          `📝 ${d.description}`
+          `📝 ${desc}`
         );
       })
       .join("\n\n");

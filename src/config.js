@@ -1,7 +1,7 @@
 export const ADMIN_ID = Number(process.env.ADMIN_ID);
 export const ETH_ADDRESS = process.env.ETH_ADDRESS;
 
-export const MIN_DEPOSIT_USD = 10;
+export const MIN_DEPOSIT_USD = 20;
 
 export const DEPOSIT_WALLETS = {
   btc: {
